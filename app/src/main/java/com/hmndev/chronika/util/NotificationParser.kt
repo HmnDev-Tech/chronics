@@ -6,6 +6,7 @@ import android.graphics.Bitmap
 import android.os.Build
 import android.os.Bundle
 import android.service.notification.StatusBarNotification
+import androidx.core.graphics.drawable.toBitmap
 import org.json.JSONArray
 import org.json.JSONObject
 
@@ -94,7 +95,7 @@ object NotificationParser {
             context.getSystemService(android.app.NotificationManager::class.java)
                 ?.getNotificationChannel(notification.channelId)?.name?.toString()
         }.getOrNull().orEmpty()
-        val images = readImages(notification, extras)
+        val images = readImages(context, notification, extras)
         val postedAt = sbn.postTime
         val timeKey = when {
             messages.isNotEmpty() -> messages.last().time.toString()
@@ -142,7 +143,7 @@ object NotificationParser {
             val sender = bundle.getCharSequence("sender")?.toString()
                 ?: senderFromPerson(bundle)
             val messageText = bundle.getCharSequence("text")?.toString().orEmpty()
-            if (messageText.isBlank() && sender.isBlank()) return@forEach
+            if (messageText.isBlank() && sender.isNullOrBlank()) return@forEach
             result.add(
                 ParsedMessage(
                     sender = sender.orEmpty(),
@@ -160,10 +161,17 @@ object NotificationParser {
         return (bundle.get("sender_person") as? android.app.Person)?.name?.toString()
     }
 
-    private fun readImages(notification: Notification, extras: Bundle): List<Bitmap> {
+    private fun readImages(
+        context: Context,
+        notification: Notification,
+        extras: Bundle
+    ): List<Bitmap> {
         val result = ArrayList<Bitmap>()
         runCatching {
-            notification.getLargeIcon()?.bitmap?.let { result.add(it) }
+            val drawable = notification.getLargeIcon()?.loadDrawable(context) ?: return@runCatching
+            val width = drawable.intrinsicWidth.takeIf { it > 0 } ?: 256
+            val height = drawable.intrinsicHeight.takeIf { it > 0 } ?: 256
+            result.add(drawable.toBitmap(width, height))
         }
         @Suppress("DEPRECATION")
         runCatching {
