@@ -1,48 +1,49 @@
-# TASTE · почему Хроника выглядит именно так
+# TASTE · why Chronika looks the way it does
 
-## Идея
-Не «список уведомлений», а **бумажный архив с пульсом**. Уведомление — это
-запись в дневнике наблюдений, а не строка в inbox. Отсюда: бумажная палитра,
-крупная типографика, таймлайн с рельсом и «пульс» как метафора живого потока.
+## Idea
+Not a "list of notifications", but **a paper archive with a pulse**. A
+notification is an entry in an observation journal, not a row in an inbox.
+Hence: a paper palette, large typography, a timeline with a rail, and "pulse"
+as a metaphor for a living stream.
 
-## Палитра
-- `Paper #F7F4EA` / `Ink #1B1D17` — основа, тёплая бумага вместо стерильного белого.
-- `Lime #D7F26A` — акцент «живого»: закрепления, готовность, активный фильтр.
-- `Coral #B84A2B` — тревожное: недоступные разрешения, важное, ошибки.
-- `Forest #2D4A32` — основной тон действий, не дефолтный фиолетовый Material.
-- Тёмная тема — `Night #0F120E` с лаймовым акцентом, а не инверсия светлой.
+## Palette
+- `Paper #F7F4EA` / `Ink #1B1D17` — the base, warm paper instead of sterile white.
+- `Lime #D7F26A` — the "living" accent: pins, readiness, active filter.
+- `Coral #B84A2B` — the alarming one: missing permissions, important items, errors.
+- `Forest #2D4A32` — the main action tone, not default Material purple.
+- Dark theme — `Night #0F120E` with a lime accent, not an inversion of the light one.
 
-Динамический цвет включается по желанию, но по умолчанию выключен: фирменная
-палитра важнее «обоев».
+Dynamic color is opt-in and off by default: the brand palette matters more than
+"wallpaper".
 
-## Композиция
-- **Асимметрия вместо сетки**: hero-блок 246 dp с блобом `Cookie9Sided`,
-  смещённые карточки статистики, волна на фоне.
-- **Рельс таймлайна**: время слева, точка, вертикальная линия; карточки
-  сдвигаются на 4–8 dp в зависимости от позиции — ритм, а не таблица.
-- **Плавающий док** вместо NavigationBar: три пункта, выбранный растягивается
-  и показывает подпись. Контент живёт под доком.
-- **Мозаика инсайтов**: большая карточка + две малые, а не ровная сетка 2×2.
-- **Крупные радиусы** (22–42 dp) и «таблетки» для метаданных.
+## Composition
+- **Asymmetry instead of a grid**: a 246 dp hero block with a `Cookie9Sided`
+  blob, offset stat cards, a wave in the background.
+- **Timeline rail**: time on the left, a dot, a vertical line; cards shift by
+  4–8 dp depending on position — rhythm, not a table.
+- **Floating dock** instead of a NavigationBar: three items, the selected one
+  stretches and shows a label. Content lives under the dock.
+- **Insight mosaic**: one large card plus two small ones, not an even 2×2 grid.
+- **Large radii** (22–42 dp) and "pills" for metadata.
 
-## Типографика
-Display — Black/ExtraBold с отрицательным трекингом; служебные подписи —
-monospace с широким трекингом. Контраст между «заголовком-плакатом» и
-«технической подписью» — основа характера.
+## Typography
+Display — Black/ExtraBold with negative tracking; utility captions —
+monospace with wide tracking. The contrast between the "poster headline" and
+the "technical caption" is the core of the character.
 
-## Движение
-`MotionScheme.expressive()`: пружины на доке и карточках, `pressScale` 0.965,
-плавная смена экранов, пульсирующая точка в hero. Анимация подчёркивает
-действие, а не украшает.
+## Motion
+`MotionScheme.expressive()`: springs on the dock and cards, `pressScale` 0.965,
+smooth screen transitions, a pulsing dot in the hero. Animation emphasizes the
+action rather than decorating it.
 
-## Чего избегали
-- Стандартный `NavigationBar` + `TopAppBar` + список `ListItem`.
-- Фиолетовый Material You по умолчанию.
-- Ровные карточки с одинаковым радиусом и тенью.
-- Иконки-заглушки: приложение показывает реальные иконки пакетов, а при их
-  отсутствии — инициалы в цветном квадрате.
+## What we avoided
+- The standard `NavigationBar` + `TopAppBar` + `ListItem` list.
+- Default purple Material You.
+- Uniform cards with the same radius and shadow.
+- Placeholder icons: the app shows real package icons, and when they are
+  missing — initials in a colored square.
 
-## Функциональная честность
-Дизайн не имитирует функции: каждый экран работает с реальной SQLite-базой,
-реальными уведомлениями, реальным MediaStore и реальным Shizuku. Тестовая
-кнопка отправляет настоящее уведомление, а не рисует фейковую запись.
+## Functional honesty
+The design does not imitate features: every screen works with a real SQLite
+database, real notifications, real MediaStore, and real Shizuku. The test button
+posts a real notification instead of drawing a fake entry.

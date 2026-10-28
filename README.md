@@ -1,68 +1,69 @@
-# Хроника
+# Chronika
 
-Локальный архив уведомлений Android. Хроника сохраняет полный текст уведомлений
-в собственную базу и в папку `Downloads/Chronika`, поэтому сообщение остаётся
-доступным даже после того, как его удалили из чата или очистили панель
-уведомлений.
+A local notification archive for Android. Chronika stores the full text of every
+notification in its own database and in the `Downloads/Chronika` folder, so a
+message stays available even after it has been deleted from the chat or wiped
+from the notification shade.
 
-Приложение не отправляет данные в сеть и не требует аккаунта.
+The app sends nothing to the network and requires no account.
 
-## Что умеет
+## Features
 
-- **Слушатель уведомлений** — заголовок, текст, `bigText`, `subText`, беседа,
-  канал, группа, приоритет, действия, вложения (`largeIcon`, `picture`),
-  сообщения `MessagingStyle` с отправителями и временем.
-- **Служба доступности** — страховочный источник: читает текст событий
-  уведомлений и (опционально) открытую панель System UI.
-- **Shizuku** — выдача доступа к слушателю и службе доступности через shell,
-  импорт текущей панели через `dumpsys notification --noredact`.
-- **Экспорт в Downloads** — на каждое уведомление JSON и TXT, изображения в
-  `media/`, полный бэкап архива в `backup/`. На Android 10+ используется
-  MediaStore, на Android 8–9 — прямая запись в общую папку.
-- **Фильтры** — чёрный/белый список приложений, стоп-слова, обязательные слова,
-  игнорирование постоянных и тихих уведомлений, склейка повторов.
-- **Приватность** — маскирование OTP, телефонов, e-mail и номеров карт.
-- **Журнал** — таймлайн по дням, поиск, закрепление, архив, карточка записи с
-  сообщениями, вложениями, сырыми extras и копированием текста.
-- **Пульс** — статистика по часам и дням, топ приложений, источники, заполнение
-  архива.
-- **Настройки** — тема, динамический цвет, срок хранения, лимит записей, папка,
-  автоэкспорт, маскирование.
+- **Notification listener** — title, text, `bigText`, `subText`, conversation,
+  channel, group, priority, actions, attachments (`largeIcon`, `picture`), and
+  `MessagingStyle` messages with senders and timestamps.
+- **Accessibility service** — a fallback source: reads notification event text
+  and, optionally, the open System UI shade.
+- **Shizuku** — grants notification-listener and accessibility access through
+  shell, and imports the current shade via `dumpsys notification --noredact`.
+- **Downloads export** — a JSON and TXT file per notification, images under
+  `media/`, and a full archive backup under `backup/`. MediaStore is used on
+  Android 10+, direct writes to the shared folder on Android 8–9.
+- **Filters** — app blocklist/allowlist, stop words, required words, ignoring
+  ongoing and silent notifications, duplicate merging.
+- **Privacy** — masking of OTP codes, phone numbers, e-mail addresses, and card
+  numbers.
+- **Journal** — day-by-day timeline, search, pinning, archive, an entry screen
+  with messages, attachments, raw extras, and text copying.
+- **Pulse** — statistics by hour and day, top apps, sources, archive fill.
+- **Settings** — theme, dynamic color, retention period, entry limit, folder,
+  auto-export, masking.
 
-## Сборка
+## Build
 
-Локальная сборка не требуется. Каждый push в `main` запускает GitHub Actions:
+No local build is required. Every push to `main` starts GitHub Actions:
 
-1. `./gradlew testDebugUnitTest` — юнит-тесты парсера текста, отпечатков и времени.
+1. `./gradlew testDebugUnitTest` — unit tests for text parsing, fingerprints,
+   and time formatting.
 2. `./gradlew assembleDebug` — debug APK.
-3. APK публикуется артефактом `chronika-debug-apk` (хранится 30 дней).
+3. The APK is published as the `chronika-debug-apk` artifact (kept for 30 days).
 
-Скачать: вкладка **Actions** → последний запуск → **Artifacts** →
+Download: the **Actions** tab → latest run → **Artifacts** →
 `chronika-debug-apk`.
 
-Стек: Kotlin 2.2.20, AGP 8.13.2, Gradle 8.13, Compose Material 3 1.5.0-beta02
-(Expressive), minSdk 26, targetSdk 36, JDK 17.
+Stack: Kotlin 2.2.20, AGP 9.1.1, Gradle 9.3.1, Compose Material 3 1.5.0-beta02
+(Expressive), minSdk 26, compileSdk/targetSdk 37, JDK 17.
 
-## Первый запуск
+## First run
 
-1. Установить APK.
-2. Разрешить уведомления (Android 13+).
-3. Открыть онбординг и выдать **доступ к уведомлениям**.
-4. По желанию: включить **службу доступности** и **Shizuku**.
-5. Нажать «Отправить тестовое уведомление» — запись должна появиться в журнале.
+1. Install the APK.
+2. Allow notifications (Android 13+).
+3. Open onboarding and grant **notification access**.
+4. Optionally enable the **accessibility service** and **Shizuku**.
+5. Tap “Send test notification” — an entry should appear in the journal.
 
-## Структура
+## Structure
 
 ```
 app/src/main/java/com/hmndev/chronika/
-  data/       SQLite, репозиторий, настройки, модели
-  service/    слушатель уведомлений, accessibility, движок захвата
-  shizuku/    разрешения, shell, импорт dumpsys
-  util/       парсер уведомлений, экспорт, время, маскирование
-  ui/         Compose-экран, компоненты, тема
+  data/       SQLite, repository, settings, models
+  service/    notification listener, accessibility, capture engine
+  shizuku/    permissions, shell, dumpsys import
+  util/       notification parser, export, time, masking
+  ui/         Compose screens, components, theme
 ```
 
-## Приватность
+## Privacy
 
-Все данные остаются на устройстве. Разрешение `QUERY_ALL_PACKAGES` используется
-только для показа списка приложений в фильтрах. Сеть приложению не нужна.
+All data stays on the device. The `QUERY_ALL_PACKAGES` permission is used only
+to show the app list in filters. The app needs no network access.

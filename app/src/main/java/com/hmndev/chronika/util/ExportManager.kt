@@ -220,8 +220,7 @@ object ExportManager {
                 "$folder/media",
                 name,
                 "image/png",
-                bytes.toByteArray(),
-                MediaStore.Images.Media.EXTERNAL_CONTENT_URI
+                bytes.toByteArray()
             )
         } catch (t: Throwable) {
             ""
