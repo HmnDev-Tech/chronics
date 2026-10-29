@@ -118,7 +118,7 @@ internal val RU_STRINGS: Map<String, String> = mapOf(
     "settings.autoexport" to "Автоэкспорт в Downloads",
     "settings.autoexport_desc" to "Каждая запись сразу получает JSON/TXT-файл",
     "settings.images" to "Сохранять изображения",
-    "settings.images_desc" to "Large icon и picture в папку media",
+    "settings.images_desc" to "Вложенные фото в папку media",
     "settings.raw_extras" to "Сырые extras",
     "settings.raw_extras_desc" to "Технический payload уведомления в JSON",
     "settings.dedupe" to "Склеивать повторы",

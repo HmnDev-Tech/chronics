@@ -118,7 +118,7 @@ internal val EN_STRINGS: Map<String, String> = mapOf(
     "settings.autoexport" to "Auto-export to Downloads",
     "settings.autoexport_desc" to "Every entry immediately gets a JSON/TXT file",
     "settings.images" to "Save images",
-    "settings.images_desc" to "Large icon and picture into the media folder",
+    "settings.images_desc" to "Attached photos into the media folder",
     "settings.raw_extras" to "Raw extras",
     "settings.raw_extras_desc" to "Technical notification payload as JSON",
     "settings.dedupe" to "Merge duplicates",

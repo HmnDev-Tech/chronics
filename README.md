@@ -10,7 +10,7 @@ The app sends nothing to the network and requires no account.
 ## Features
 
 - **Notification listener** — title, text, `bigText`, `subText`, conversation,
-  channel, group, priority, actions, attachments (`largeIcon`, `picture`), and
+  channel, group, priority, actions, attachments (`picture`), and
   `MessagingStyle` messages with senders and timestamps.
 - **Accessibility service** — a fallback source: reads notification event text
   and, optionally, the open System UI shade.

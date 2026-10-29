@@ -118,7 +118,7 @@ internal val ES_STRINGS: Map<String, String> = mapOf(
     "settings.autoexport" to "Autoexportar a Descargas",
     "settings.autoexport_desc" to "Cada registro recibe al instante un archivo JSON/TXT",
     "settings.images" to "Guardar imágenes",
-    "settings.images_desc" to "Icono grande e imagen en la carpeta de medios",
+    "settings.images_desc" to "Fotos adjuntas en la carpeta de medios",
     "settings.raw_extras" to "Extras en bruto",
     "settings.raw_extras_desc" to "Carga técnica de la notificación en JSON",
     "settings.dedupe" to "Combinar duplicados",

@@ -118,7 +118,7 @@ internal val KK_STRINGS: Map<String, String> = mapOf(
     "settings.autoexport" to "Downloads ішіне автоэкспорт",
     "settings.autoexport_desc" to "Әр жазба бірден JSON/TXT файлын алады",
     "settings.images" to "Суреттерді сақтау",
-    "settings.images_desc" to "Large icon және picture медиа қалтасына",
+    "settings.images_desc" to "Қоса берілген фотосуреттер медиа қалтасына",
     "settings.raw_extras" to "Шикі extras",
     "settings.raw_extras_desc" to "Хабарламаның техникалық payload-ы JSON түрінде",
     "settings.dedupe" to "Қайталауларды біріктіру",

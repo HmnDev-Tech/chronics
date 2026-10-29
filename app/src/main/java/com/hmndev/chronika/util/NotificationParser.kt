@@ -3,6 +3,9 @@ package com.hmndev.chronika.util
 import android.app.Notification
 import android.content.Context
 import android.graphics.Bitmap
+import android.graphics.BitmapFactory
+import android.graphics.drawable.Icon
+import android.net.Uri
 import android.os.Build
 import android.os.Bundle
 import android.service.notification.StatusBarNotification
@@ -64,6 +67,7 @@ data class ParsedNotification(
 object NotificationParser {
     private val skipExtraKeys = setOf(
         "android.picture",
+        "android.pictureIcon",
         "android.largeIcon",
         "android.icon",
         "android.messages",
@@ -95,7 +99,7 @@ object NotificationParser {
             context.getSystemService(android.app.NotificationManager::class.java)
                 ?.getNotificationChannel(notification.channelId)?.name?.toString()
         }.getOrNull().orEmpty()
-        val images = readImages(context, notification, extras)
+        val images = readImages(context, extras)
         val postedAt = sbn.postTime
         val timeKey = when {
             messages.isNotEmpty() -> messages.last().time.toString()
@@ -163,21 +167,81 @@ object NotificationParser {
 
     private fun readImages(
         context: Context,
-        notification: Notification,
         extras: Bundle
     ): List<Bitmap> {
         val result = ArrayList<Bitmap>()
+
+        // 1. Notification.EXTRA_PICTURE ("android.picture")
         runCatching {
-            val drawable = notification.getLargeIcon()?.loadDrawable(context) ?: return@runCatching
-            val width = drawable.intrinsicWidth.takeIf { it > 0 } ?: 256
-            val height = drawable.intrinsicHeight.takeIf { it > 0 } ?: 256
-            result.add(drawable.toBitmap(width, height))
+            when (val pic = extras.get(Notification.EXTRA_PICTURE)) {
+                is Bitmap -> result.add(pic)
+                is Icon -> {
+                    pic.loadDrawable(context)?.let { drawable ->
+                        val width = drawable.intrinsicWidth.takeIf { it > 0 } ?: 1080
+                        val height = drawable.intrinsicHeight.takeIf { it > 0 } ?: 1080
+                        result.add(drawable.toBitmap(width, height))
+                    }
+                }
+                is Uri -> {
+                    context.contentResolver.openInputStream(pic)?.use { stream ->
+                        BitmapFactory.decodeStream(stream)?.let { result.add(it) }
+                    }
+                }
+            }
         }
-        @Suppress("DEPRECATION")
+
+        // 2. Notification.EXTRA_PICTURE_ICON ("android.pictureIcon") for Android 12+
         runCatching {
-            extras.getParcelable<Bitmap>(Notification.EXTRA_PICTURE)?.let { result.add(it) }
+            val picIcon = extras.get("android.pictureIcon") as? Icon
+            if (picIcon != null && result.isEmpty()) {
+                picIcon.loadDrawable(context)?.let { drawable ->
+                    val width = drawable.intrinsicWidth.takeIf { it > 0 } ?: 1080
+                    val height = drawable.intrinsicHeight.takeIf { it > 0 } ?: 1080
+                    result.add(drawable.toBitmap(width, height))
+                }
+            }
         }
+
+        // 3. Attached photos in MessagingStyle messages
+        runCatching {
+            readMessageAttachments(context, extras, result)
+        }
+
         return result
+    }
+
+    private fun readMessageAttachments(
+        context: Context,
+        extras: Bundle,
+        result: MutableList<Bitmap>
+    ) {
+        val bundles = ArrayList<Bundle>()
+        extras.getParcelableArray(Notification.EXTRA_MESSAGES)?.forEach {
+            (it as? Bundle)?.let { b -> bundles.add(b) }
+        }
+        extras.getParcelableArray("android.messages.historic")?.forEach {
+            (it as? Bundle)?.let { b -> bundles.add(b) }
+        }
+
+        for (bundle in bundles) {
+            val type = bundle.getString("type")
+            if (type != null && type.startsWith("image/")) {
+                val uri = (bundle.get("uri") as? Uri)
+                    ?: runCatching { Uri.parse(bundle.getString("uri")) }.getOrNull()
+                if (uri != null) {
+                    runCatching {
+                        context.contentResolver.openInputStream(uri)?.use { stream ->
+                            BitmapFactory.decodeStream(stream)?.let { result.add(it) }
+                        }
+                    }
+                }
+            }
+            @Suppress("DEPRECATION")
+            runCatching {
+                (bundle.getParcelable<Bitmap>("image") ?: bundle.getParcelable<Bitmap>("picture"))
+                    ?.let { result.add(it) }
+            }
+        }
     }
 
     private fun extrasToJson(extras: Bundle): String {

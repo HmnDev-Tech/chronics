@@ -635,7 +635,7 @@ fun SettingsScreen(
                     title = S["settings.policy"],
                     description = S["settings.policy_desc"],
                     icon = Icons.Rounded.Security,
-                    onClick = { onOpenUrl("https://github.com/HmnDev-Tech/chronika") }
+                    onClick = { onOpenUrl("https://github.com/HmnDev-Tech/chronics") }
                 )
                 SettingsGroupDivider()
                 Text(

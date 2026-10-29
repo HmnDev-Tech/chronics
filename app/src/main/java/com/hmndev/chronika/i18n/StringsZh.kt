@@ -118,7 +118,7 @@ internal val ZH_STRINGS: Map<String, String> = mapOf(
     "settings.autoexport" to "自动导出到下载",
     "settings.autoexport_desc" to "每条记录立即生成 JSON/TXT 文件",
     "settings.images" to "保存图片",
-    "settings.images_desc" to "大图标和图片保存到媒体文件夹",
+    "settings.images_desc" to "将附加照片保存到媒体文件夹",
     "settings.raw_extras" to "原始 extras",
     "settings.raw_extras_desc" to "通知的技术负载（JSON）",
     "settings.dedupe" to "合并重复项",
