@@ -99,7 +99,7 @@ object NotificationParser {
             context.getSystemService(android.app.NotificationManager::class.java)
                 ?.getNotificationChannel(notification.channelId)?.name?.toString()
         }.getOrNull().orEmpty()
-        val images = readImages(context, extras)
+        val images = readImages(context, notification, extras, title, text, bigText, messages)
         val postedAt = sbn.postTime
         val timeKey = when {
             messages.isNotEmpty() -> messages.last().time.toString()
@@ -165,9 +165,19 @@ object NotificationParser {
         return (bundle.get("sender_person") as? android.app.Person)?.name?.toString()
     }
 
+    private val photoEmojiRegex = Regex("[📷📸🖼🎥📹]")
+    private val photoWordRegex = Regex(
+        """(?i)^([📷📸🖼🎥📹]?\s*(\d+\s+)?(фото(графи[яиею])?|photo|photos|foto|fotos|picture|pictures|картинк[аеиу]|изображени[ея]|сурет|видео|video|videos)\b)"""
+    )
+
     private fun readImages(
         context: Context,
-        extras: Bundle
+        notification: Notification,
+        extras: Bundle,
+        title: String,
+        text: String,
+        bigText: String,
+        messages: List<ParsedMessage>
     ): List<Bitmap> {
         val result = ArrayList<Bitmap>()
 
@@ -207,7 +217,130 @@ object NotificationParser {
             readMessageAttachments(context, extras, result)
         }
 
+        // 4. Fallback for messengers like WhatsApp where photo thumbnail is passed in largeIcon
+        if (result.isEmpty() && isPhotoNotification(title, text, bigText, messages)) {
+            runCatching {
+                val largeBitmap = extractLargeIconBitmap(context, notification, extras)
+                if (largeBitmap != null) {
+                    val avatarBitmaps = collectAvatarBitmaps(context, extras)
+                    val isAvatar = avatarBitmaps.any { isSameImage(it, largeBitmap) }
+                    if (!isAvatar) {
+                        result.add(largeBitmap)
+                    }
+                }
+            }
+        }
+
         return result
+    }
+
+    private fun isPhotoNotification(
+        title: String,
+        text: String,
+        bigText: String,
+        messages: List<ParsedMessage>
+    ): Boolean {
+        val candidates = ArrayList<String>(messages.size + 2)
+        if (text.isNotBlank()) candidates.add(text)
+        if (bigText.isNotBlank()) candidates.add(bigText)
+        messages.forEach { if (it.text.isNotBlank()) candidates.add(it.text) }
+
+        return candidates.any { candidate ->
+            val trimmed = candidate.trim()
+            trimmed.contains(photoEmojiRegex) || photoWordRegex.containsMatchIn(trimmed)
+        }
+    }
+
+    private fun extractLargeIconBitmap(
+        context: Context,
+        notification: Notification,
+        extras: Bundle
+    ): Bitmap? {
+        runCatching {
+            val drawable = notification.getLargeIcon()?.loadDrawable(context)
+            if (drawable != null) {
+                val width = drawable.intrinsicWidth.takeIf { it > 0 } ?: 1080
+                val height = drawable.intrinsicHeight.takeIf { it > 0 } ?: 1080
+                return drawable.toBitmap(width, height)
+            }
+        }
+        runCatching {
+            when (val obj = extras.get(Notification.EXTRA_LARGE_ICON)) {
+                is Bitmap -> return obj
+                is Icon -> {
+                    obj.loadDrawable(context)?.let { drawable ->
+                        val width = drawable.intrinsicWidth.takeIf { it > 0 } ?: 1080
+                        val height = drawable.intrinsicHeight.takeIf { it > 0 } ?: 1080
+                        return drawable.toBitmap(width, height)
+                    }
+                }
+            }
+        }
+        runCatching {
+            when (val obj = extras.get("android.largeIcon.big")) {
+                is Bitmap -> return obj
+                is Icon -> {
+                    obj.loadDrawable(context)?.let { drawable ->
+                        val width = drawable.intrinsicWidth.takeIf { it > 0 } ?: 1080
+                        val height = drawable.intrinsicHeight.takeIf { it > 0 } ?: 1080
+                        return drawable.toBitmap(width, height)
+                    }
+                }
+            }
+        }
+        return null
+    }
+
+    private fun collectAvatarBitmaps(context: Context, extras: Bundle): List<Bitmap> {
+        val avatars = ArrayList<Bitmap>()
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
+            val rawMessages = extras.getParcelableArray(Notification.EXTRA_MESSAGES)
+            rawMessages?.forEach { item ->
+                val bundle = item as? Bundle ?: return@forEach
+                runCatching {
+                    val person = bundle.get("sender_person") as? android.app.Person
+                    person?.icon?.loadDrawable(context)?.let { drawable ->
+                        val width = drawable.intrinsicWidth.takeIf { it > 0 } ?: 128
+                        val height = drawable.intrinsicHeight.takeIf { it > 0 } ?: 128
+                        avatars.add(drawable.toBitmap(width, height))
+                    }
+                }
+            }
+            runCatching {
+                val user = extras.get(Notification.EXTRA_MESSAGING_STYLE_USER) as? android.app.Person
+                user?.icon?.loadDrawable(context)?.let { drawable ->
+                    val width = drawable.intrinsicWidth.takeIf { it > 0 } ?: 128
+                    val height = drawable.intrinsicHeight.takeIf { it > 0 } ?: 128
+                    avatars.add(drawable.toBitmap(width, height))
+                }
+            }
+            val historicMessages = extras.getParcelableArray("android.messages.historic")
+            historicMessages?.forEach { item ->
+                val bundle = item as? Bundle ?: return@forEach
+                runCatching {
+                    val person = bundle.get("sender_person") as? android.app.Person
+                    person?.icon?.loadDrawable(context)?.let { drawable ->
+                        val width = drawable.intrinsicWidth.takeIf { it > 0 } ?: 128
+                        val height = drawable.intrinsicHeight.takeIf { it > 0 } ?: 128
+                        avatars.add(drawable.toBitmap(width, height))
+                    }
+                }
+            }
+        }
+        return avatars
+    }
+
+    private fun isSameImage(a: Bitmap, b: Bitmap): Boolean {
+        if (a === b) return true
+        if (a.sameAs(b)) return true
+        return runCatching {
+            val scaledA = if (a.width == 48 && a.height == 48) a else Bitmap.createScaledBitmap(a, 48, 48, false)
+            val scaledB = if (b.width == 48 && b.height == 48) b else Bitmap.createScaledBitmap(b, 48, 48, false)
+            val same = scaledA.sameAs(scaledB)
+            if (scaledA !== a) scaledA.recycle()
+            if (scaledB !== b) scaledB.recycle()
+            same
+        }.getOrDefault(false)
     }
 
     private fun readMessageAttachments(
