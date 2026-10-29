@@ -1,8 +1,9 @@
-name: Build Chronics debug APK
+name: Build Chronics APK
 
 on:
   push:
     branches: [ "main" ]
+    tags: [ "v*" ]
   pull_request:
     branches: [ "main" ]
   workflow_dispatch:
@@ -17,7 +18,7 @@ concurrency:
 jobs:
   build:
     runs-on: ubuntu-latest
-    timeout-minutes: 35
+    timeout-minutes: 45
 
     steps:
       - name: Checkout
@@ -50,6 +51,10 @@ jobs:
         run: |
           set -euo pipefail
           if [ -z "$KEYSTORE_BASE64" ]; then
+            if [[ "$GITHUB_REF" == refs/tags/* ]]; then
+              echo "::error::A release must be signed with the stable key, but CHRONICS_KEYSTORE_BASE64 is missing."
+              exit 1
+            fi
             echo "::warning::Signing key secret is missing; the APK will use throwaway debug signing and updates will need a reinstall."
             exit 0
           fi
@@ -69,17 +74,37 @@ jobs:
       - name: Assemble debug APK
         run: ./gradlew assembleDebug --stacktrace
 
-      - name: Verify APK signature
+      # Release builds are only produced for main and tags. Pull requests from
+      # forks and Dependabot have no signing secrets, so an unsigned release
+      # would be useless there.
+      - name: Assemble release APK
+        if: github.event_name != 'pull_request'
+        run: ./gradlew assembleRelease --stacktrace
+
+      - name: Verify APK signatures
+        if: env.CHRONICS_KEYSTORE_PATH != ''
         run: |
           APKSIGNER=$(ls "$ANDROID_HOME"/build-tools/*/apksigner | sort -V | tail -1)
-          APK=$(ls app/build/outputs/apk/debug/*.apk | head -1)
-          "$APKSIGNER" verify --print-certs "$APK" | tee signature.txt
+          : > signature.txt
+          for APK in app/build/outputs/apk/debug/*.apk app/build/outputs/apk/release/*.apk; do
+            [ -f "$APK" ] || continue
+            echo "### $APK" >> signature.txt
+            "$APKSIGNER" verify --print-certs "$APK" >> signature.txt
+          done
+          cat signature.txt
           {
-            echo "### APK signature"
+            echo "### APK signatures"
             echo '```'
             cat signature.txt
             echo '```'
           } >> "$GITHUB_STEP_SUMMARY"
+
+          DEBUG_SHA=$(grep -m1 'SHA-256 digest' signature.txt | awk '{print $NF}')
+          RELEASE_SHA=$(grep 'SHA-256 digest' signature.txt | tail -1 | awk '{print $NF}')
+          if [ -n "$RELEASE_SHA" ] && [ "$DEBUG_SHA" != "$RELEASE_SHA" ]; then
+            echo "::error::Debug and release APKs are signed by different keys."
+            exit 1
+          fi
 
       - name: Upload debug APK
         if: success()
@@ -87,6 +112,15 @@ jobs:
         with:
           name: chronics-debug-apk
           path: app/build/outputs/apk/debug/*.apk
+          if-no-files-found: error
+          retention-days: 30
+
+      - name: Upload release APK
+        if: github.event_name != 'pull_request' && success()
+        uses: actions/upload-artifact@v7
+        with:
+          name: chronics-release-apk
+          path: app/build/outputs/apk/release/*.apk
           if-no-files-found: error
           retention-days: 30
 
@@ -100,3 +134,57 @@ jobs:
             app/build/test-results/**
           if-no-files-found: ignore
           retention-days: 7
+
+  release:
+    name: Publish GitHub release
+    if: startsWith(github.ref, 'refs/tags/v')
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: Download release APK
+        uses: actions/download-artifact@v7
+        with:
+          name: chronics-release-apk
+          path: dist
+
+      # Never publish an APK that is not signed with the stable key.
+      - name: Verify APK signature
+        run: |
+          APKSIGNER=$(ls "$ANDROID_HOME"/build-tools/*/apksigner 2>/dev/null | sort -V | tail -1 || true)
+          if [ -z "$APKSIGNER" ]; then
+            SDKMANAGER=$(command -v sdkmanager || ls "$ANDROID_HOME"/cmdline-tools/*/bin/sdkmanager 2>/dev/null | head -1)
+            yes | "$SDKMANAGER" --licenses > /dev/null || true
+            "$SDKMANAGER" --install "build-tools;36.0.0" > /dev/null
+            APKSIGNER=$(ls "$ANDROID_HOME"/build-tools/*/apksigner | sort -V | tail -1)
+          fi
+          APK=$(ls dist/*.apk | head -1)
+          "$APKSIGNER" verify --print-certs "$APK" | tee signature.txt
+          {
+            echo "### Release APK signature"
+            echo '```'
+            cat signature.txt
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Publish release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          NOTES="docs/release-notes/${GITHUB_REF_NAME}.md"
+          if gh release view "$GITHUB_REF_NAME" > /dev/null 2>&1; then
+            gh release upload "$GITHUB_REF_NAME" dist/*.apk --clobber
+            exit 0
+          fi
+          ARGS=(--prerelease --verify-tag --title "Chronics ${GITHUB_REF_NAME}")
+          if [ -f "$NOTES" ]; then
+            ARGS+=(--notes-file "$NOTES")
+          else
+            ARGS+=(--generate-notes)
+          fi
+          gh release create "$GITHUB_REF_NAME" dist/*.apk "${ARGS[@]}"

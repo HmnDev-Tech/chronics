@@ -17,6 +17,7 @@ text of notifications and keeps a searchable copy in a local database and in
 | | |
 | --- | --- |
 | Platform | Android 8.0 (API 26) and newer |
+| Latest beta | 1.0.0-beta01 |
 | Language | Kotlin, Jetpack Compose, Material 3 Expressive |
 | Storage | App-private SQLite + `Downloads/Chronics` |
 | Network | None. The app declares no internet permission |
@@ -38,5 +39,6 @@ and TXT when auto-export is on.
 ## Repository
 
 - Source, issues and pull requests: <https://github.com/HmnDev-Tech/chronics>
-- APK builds: Actions tab → latest *Build Chronics debug APK* run
+- Releases: <https://github.com/HmnDev-Tech/chronics/releases>
+- APK builds: Actions tab → latest *Build Chronics APK* run
 - Security reports: [SECURITY.md](https://github.com/HmnDev-Tech/chronics/blob/main/SECURITY.md)

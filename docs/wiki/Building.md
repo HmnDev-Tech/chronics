@@ -2,17 +2,33 @@
 
 ## Continuous integration
 
-Every push to `main` and every pull request runs
+Every push to `main`, every tag and every pull request runs
 [`.github/workflows/android.yml`](https://github.com/HmnDev-Tech/chronics/blob/main/.github/workflows/android.yml):
 
 1. Install Android SDK platform `android-37.0` and build-tools `36.0.0`.
 2. Restore the signing key from repository secrets.
 3. `./gradlew testDebugUnitTest`
 4. `./gradlew assembleDebug`
-5. Print the APK certificate fingerprint into the run summary.
-6. Upload `chronics-debug-apk` (30 days) and, on failure, the test reports (7 days).
+5. `./gradlew assembleRelease` on `main` and on tags.
+6. Print both APK certificate fingerprints into the run summary.
+7. Upload `chronics-debug-apk` and `chronics-release-apk` (30 days) and, on failure, the test reports (7 days).
 
-A run takes about three minutes.
+A run takes about three to five minutes. A `v*` tag additionally starts the
+release job, which verifies the release APK signature and publishes a GitHub
+prerelease with `app-release.apk` attached.
+
+## Releasing
+
+1. Bump `versionCode` and `versionName` in `app/build.gradle.kts`.
+2. Add `docs/release-notes/v<version>.md`.
+3. Commit and push `main`, then push the tag:
+
+   ```bash
+   git tag v1.0.0-beta01
+   git push origin v1.0.0-beta01
+   ```
+
+4. Wait for the **Publish GitHub release** job and check the attached APK.
 
 ## Local build
 
@@ -22,9 +38,11 @@ build-tools `36.0.0`.
 ```bash
 ./gradlew testDebugUnitTest
 ./gradlew assembleDebug
+./gradlew assembleRelease
 ```
 
-The APK lands in `app/build/outputs/apk/debug/app-debug.apk`.
+The APKs land in `app/build/outputs/apk/debug/app-debug.apk` and
+`app/build/outputs/apk/release/app-release.apk`.
 
 ## Stable signature
 
@@ -58,7 +76,7 @@ installable on a clean device but cannot update an existing install.
 ## Verifying a signature
 
 ```bash
-$ANDROID_HOME/build-tools/36.0.0/apksigner verify --print-certs app-debug.apk
+$ANDROID_HOME/build-tools/36.0.0/apksigner verify --print-certs app-release.apk
 ```
 
 Compare the SHA-256 digest with the one printed in the CI run summary. It must

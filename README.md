@@ -9,6 +9,7 @@ No account, no cloud, no network access.
 
 [![Build](https://github.com/HmnDev-Tech/chronics/actions/workflows/android.yml/badge.svg?branch=main)](https://github.com/HmnDev-Tech/chronics/actions/workflows/android.yml)
 ![Platform](https://img.shields.io/badge/Android-8.0%2B-3DDC84)
+![Version](https://img.shields.io/badge/version-1.0.0--beta01-F2A900)
 ![Kotlin](https://img.shields.io/badge/Kotlin-2.2-7F52FF)
 ![Compose](https://img.shields.io/badge/Compose%20Material%203-Expressive-4285F4)
 
@@ -37,10 +38,14 @@ moment they arrive and keeps a searchable, exportable copy on your own device.
 
 ## Install
 
-1. Open the **Actions** tab and pick the latest successful *Build Chronics debug APK* run.
-2. Download the `chronics-debug-apk` artifact and unzip it.
-3. Install `app-debug.apk`. Android will ask to allow installs from your browser
-   or file manager the first time.
+The latest beta is published in [Releases](https://github.com/HmnDev-Tech/chronics/releases):
+
+1. Open the latest **v1.0.0-beta01** release and download `app-release.apk`.
+2. Install it. Android will ask to allow installs from your browser or file
+   manager the first time.
+
+Every successful `main` build is also available as the `chronics-release-apk`
+artifact on the **Actions** tab, kept for 30 days.
 
 Every APK is signed with the same key, so later builds install as an update over
 the previous one — no uninstall, no lost data.
@@ -80,15 +85,24 @@ Nothing is uploaded anywhere. The app declares no internet permission.
 
 ## Build
 
-No local Android SDK is required — CI builds every push to `main`:
+No local Android SDK is required — CI builds every push to `main` and every tag:
 
 1. `./gradlew testDebugUnitTest` — unit tests for text parsing, fingerprints, time formatting and the string catalogs.
 2. `./gradlew assembleDebug` — signed debug APK.
-3. The APK is published as the `chronics-debug-apk` artifact (kept for 30 days).
-4. The run summary prints the signing certificate fingerprint so you can confirm it never changes.
+3. `./gradlew assembleRelease` — signed release APK on `main` and on tags.
+4. Both APKs are published as artifacts (kept for 30 days); a `v*` tag also creates a GitHub release with `app-release.apk` attached.
+5. The run summary prints the signing certificate fingerprints so you can confirm they never change.
 
 Local build (optional): JDK 17, Android SDK with platform `android-37.0` and
-build-tools `36.0.0`, then `./gradlew assembleDebug`.
+build-tools `36.0.0`, then `./gradlew assembleDebug` or
+`./gradlew assembleRelease`.
+
+### Releasing
+
+1. Bump `versionCode` and `versionName` in `app/build.gradle.kts`.
+2. Add `docs/release-notes/v<version>.md`.
+3. Commit, push `main`, then tag and push: `git tag v1.0.0-beta01 && git push origin v1.0.0-beta01`.
+4. The release job verifies the APK signature and publishes a prerelease with the APK attached.
 
 ### Signing
 
@@ -105,7 +119,7 @@ Without those secrets the build still succeeds, but it falls back to the default
 debug key and the resulting APK will not install over a previous one. See
 [CONTRIBUTING.md](CONTRIBUTING.md) for local signing.
 
-Stack: Kotlin 2.2.20, AGP 9.1.1, Gradle 9.3.1, Compose Material 3 1.5.0-beta02
+Stack: Kotlin 2.2 (AGP built-in compiler), AGP 9.5.0, Gradle 9.8.2, Compose Material 3 1.5.0-beta02
 (Expressive), minSdk 26, compileSdk/targetSdk 37, JDK 17.
 
 ## Project structure

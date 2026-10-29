@@ -6,14 +6,22 @@
 - About 20 MB of free space plus room for the archive.
 - No account, no Google Play, no network.
 
+## Install from Releases
+
+1. Open [Releases](https://github.com/HmnDev-Tech/chronics/releases).
+2. Pick the latest release — currently **v1.0.0-beta01**.
+3. Download `app-release.apk`.
+4. Open the file. If Android blocks it, allow installs from your browser or file
+   manager once, then tap **Install**.
+
 ## Install from GitHub Actions
 
+Every successful `main` build also publishes the `chronics-release-apk` artifact:
+
 1. Open the [Actions](https://github.com/HmnDev-Tech/chronics/actions) tab.
-2. Pick the latest successful **Build Chronics debug APK** run.
-3. Scroll to **Artifacts** and download `chronics-debug-apk`.
-4. Unzip it — the APK is `app-debug.apk`.
-5. Open the file. If Android blocks it, allow installs from your browser or file
-   manager once, then tap **Install**.
+2. Pick the latest successful **Build Chronics APK** run.
+3. Scroll to **Artifacts** and download `chronics-release-apk`.
+4. Unzip it — the APK is `app-release.apk`.
 
 ## Updates
 
