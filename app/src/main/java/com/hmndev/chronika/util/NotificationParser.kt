@@ -307,7 +307,7 @@ object NotificationParser {
                 }
             }
             runCatching {
-                val user = extras.get(Notification.EXTRA_MESSAGING_STYLE_USER) as? android.app.Person
+                val user = extras.get("android.messagingStyleUser") as? android.app.Person
                 user?.icon?.loadDrawable(context)?.let { drawable ->
                     val width = drawable.intrinsicWidth.takeIf { it > 0 } ?: 128
                     val height = drawable.intrinsicHeight.takeIf { it > 0 } ?: 128
