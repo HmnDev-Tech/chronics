@@ -139,7 +139,7 @@ fun ChronikaRoot(viewModel: JournalViewModel) {
                         val result = viewModel.export(detail)
                         notify(
                             if (result.ok) {
-                                S.f("toast.saved", settings.folderName.ifBlank { "Chronika" })
+                                S.f("toast.saved", settings.folderName.ifBlank { "Chronics" })
                             } else {
                                 S.f("toast.save_failed", result.error)
                             }
@@ -287,7 +287,7 @@ fun ChronikaRoot(viewModel: JournalViewModel) {
                                 onExportAll = {
                                     scope.launch {
                                         val result = viewModel.exportAll()
-                                        val folder = settings.folderName.ifBlank { "Chronika" }
+                                        val folder = settings.folderName.ifBlank { "Chronics" }
                                         notify(
                                             if (result.ok) {
                                                 S.f("toast.backup_saved", folder)

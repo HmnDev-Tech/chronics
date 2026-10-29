@@ -33,7 +33,7 @@ object ExportManager {
         settings: AppSettings
     ): ExportResult = withContext(Dispatchers.IO) {
         try {
-            val folder = settings.folderName.ifBlank { "Chronika" }
+            val folder = settings.folderName.ifBlank { "Chronics" }
             val day = TimeTools.fileDay(entry.postedAt)
             val base = "${entry.postedAt}_${safe(entry.packageName)}_${entry.id}"
             val images = if (settings.saveImages) {
@@ -74,10 +74,10 @@ object ExportManager {
         settings: AppSettings
     ): ExportResult = withContext(Dispatchers.IO) {
         try {
-            val folder = settings.folderName.ifBlank { "Chronika" }
+            val folder = settings.folderName.ifBlank { "Chronics" }
             val stamp = TimeTools.nowStamp()
             val root = JSONObject().apply {
-                put("app", "Chronika")
+                put("app", "Chronics")
                 put("format", 1)
                 put("exportedAt", TimeTools.iso(System.currentTimeMillis()))
                 put("count", entries.size)

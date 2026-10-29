@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="app_name">Хроника</string>
-    <string name="notification_listener_label">Хроника · захват уведомлений</string>
-    <string name="accessibility_label">Хроника · глубокий захват</string>
-    <string name="accessibility_description">Помогает сохранять текст уведомлений, когда обычный доступ к уведомлениям недоступен. Хроника читает только события уведомлений и текст панели уведомлений.</string>
+    <string name="app_name">Chronics</string>
+    <string name="notification_listener_label">Chronics · notification capture</string>
+    <string name="accessibility_label">Chronics · deep capture</string>
+    <string name="accessibility_description">Helps save notification text when regular notification access is unavailable. Chronics reads only notification events and the notification shade text.</string>
 </resources>

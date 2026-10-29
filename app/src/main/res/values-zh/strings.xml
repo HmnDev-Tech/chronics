@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Chronics</string>
+    <string name="notification_listener_label">Chronics · 通知捕获</string>
+    <string name="accessibility_label">Chronics · 深度捕获</string>
+    <string name="accessibility_description">在普通通知访问不可用时帮助保存通知文本。Chronics 仅读取通知事件和通知栏文本。</string>
+</resources>

@@ -382,7 +382,7 @@ fun SettingsScreen(
                     label = { Text(S["settings.folder"]) },
                     leadingIcon = { Icon(Icons.Rounded.Folder, contentDescription = null) },
                     supportingText = {
-                        Text(S.f("settings.downloads_path", settings.folderName.ifBlank { "Chronika" }))
+                        Text(S.f("settings.downloads_path", settings.folderName.ifBlank { "Chronics" }))
                     },
                     singleLine = true,
                     shape = MaterialTheme.shapes.medium
@@ -639,7 +639,7 @@ fun SettingsScreen(
                 )
                 SettingsGroupDivider()
                 Text(
-                    text = S.f("settings.privacy_note", settings.folderName.ifBlank { "Chronika" }),
+                    text = S.f("settings.privacy_note", settings.folderName.ifBlank { "Chronics" }),
                     style = MaterialTheme.typography.bodySmall,
                     color = scheme.onSurfaceVariant,
                     modifier = Modifier.padding(16.dp)

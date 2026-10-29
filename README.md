@@ -1,7 +1,7 @@
-# Chronika
+# Chronics
 
-A local notification archive for Android. Chronika stores the full text of every
-notification in its own database and in the `Downloads/Chronika` folder, so a
+A local notification archive for Android. Chronics stores the full text of every
+notification in its own database and in the `Downloads/Chronics` folder, so a
 message stays available even after it has been deleted from the chat or wiped
 from the notification shade.
 
@@ -42,10 +42,10 @@ No local build is required. Every push to `main` starts GitHub Actions:
 1. `./gradlew testDebugUnitTest` — unit tests for text parsing, fingerprints,
    and time formatting.
 2. `./gradlew assembleDebug` — debug APK.
-3. The APK is published as the `chronika-debug-apk` artifact (kept for 30 days).
+3. The APK is published as the `chronics-debug-apk` artifact (kept for 30 days).
 
 Download: the **Actions** tab → latest run → **Artifacts** →
-`chronika-debug-apk`.
+`chronics-debug-apk`.
 
 Stack: Kotlin 2.2.20, AGP 9.1.1, Gradle 9.3.1, Compose Material 3 1.5.0-beta02
 (Expressive), minSdk 26, compileSdk/targetSdk 37, JDK 17.

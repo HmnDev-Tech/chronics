@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Chronics</string>
+    <string name="notification_listener_label">Chronics · захват уведомлений</string>
+    <string name="accessibility_label">Chronics · глубокий захват</string>
+    <string name="accessibility_description">Помогает сохранять текст уведомлений, когда обычный доступ к уведомлениям недоступен. Chronics читает только события уведомлений и текст панели уведомлений.</string>
+</resources>

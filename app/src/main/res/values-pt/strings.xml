@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Chronics</string>
+    <string name="notification_listener_label">Chronics · captura de notificações</string>
+    <string name="accessibility_label">Chronics · captura profunda</string>
+    <string name="accessibility_description">Ajuda a salvar o texto das notificações quando o acesso normal não está disponível. Chronics lê apenas eventos de notificação e o texto do painel.</string>
+</resources>

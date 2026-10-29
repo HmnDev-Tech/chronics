@@ -1,4 +1,4 @@
-name: Build Chronika debug APK
+name: Build Chronics debug APK
 
 on:
   push:
@@ -44,7 +44,7 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: chronika-debug-apk
+          name: chronics-debug-apk
           path: app/build/outputs/apk/debug/*.apk
           if-no-files-found: warn
           retention-days: 30
@@ -53,7 +53,7 @@ jobs:
         if: failure()
         uses: actions/upload-artifact@v4
         with:
-          name: chronika-test-reports
+          name: chronics-test-reports
           path: |
             app/build/reports/tests/**
             app/build/test-results/**

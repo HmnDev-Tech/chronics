@@ -17,7 +17,7 @@ data class AppSettings(
     val minPriority: Int = -2,
     val retentionDays: Int = 0,
     val maxEntries: Int = 20000,
-    val folderName: String = "Chronika",
+    val folderName: String = "Chronics",
     val maskSecrets: Boolean = false,
     val excludedApps: Set<String> = emptySet(),
     val includedOnly: Boolean = false,

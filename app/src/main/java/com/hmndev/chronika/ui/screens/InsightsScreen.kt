@@ -205,7 +205,7 @@ fun InsightsScreen(
 
         item(key = "footnote") {
             Text(
-                text = S.f("insights.footnote", settings.folderName.ifBlank { "Chronika" }),
+                text = S.f("insights.footnote", settings.folderName.ifBlank { "Chronics" }),
                 style = MaterialTheme.typography.bodySmall,
                 color = scheme.onSurfaceVariant
             )

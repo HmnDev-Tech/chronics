@@ -1,4 +1,4 @@
-# TASTE · why Chronika looks the way it does
+# TASTE · why Chronics looks the way it does
 
 ## Idea
 Not a "list of notifications", but **a paper archive with a pulse**. A

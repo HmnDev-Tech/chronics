@@ -82,7 +82,10 @@ object SettingsStore {
             minPriority = prefs.getInt("minPriority", defaults.minPriority),
             retentionDays = prefs.getInt("retentionDays", defaults.retentionDays),
             maxEntries = prefs.getInt("maxEntries", defaults.maxEntries),
-            folderName = prefs.getString("folderName", defaults.folderName).orEmpty().ifBlank { defaults.folderName },
+            folderName = prefs.getString("folderName", defaults.folderName)
+                .orEmpty()
+                .ifBlank { defaults.folderName }
+                .let { if (it == "Chronika") defaults.folderName else it },
             maskSecrets = prefs.getBoolean("maskSecrets", defaults.maskSecrets),
             excludedApps = prefs.getStringSet("excludedApps", defaults.excludedApps)?.toSet() ?: emptySet(),
             includedOnly = prefs.getBoolean("includedOnly", defaults.includedOnly),

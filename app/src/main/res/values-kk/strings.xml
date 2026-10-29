@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Chronics</string>
+    <string name="notification_listener_label">Chronics · хабарламаларды ұстау</string>
+    <string name="accessibility_label">Chronics · терең ұстау</string>
+    <string name="accessibility_description">Қарапайым хабарлама рұқсаты қолжетімсіз болғанда хабарлама мәтінін сақтауға көмектеседі. Chronics тек хабарлама оқиғаларын және хабарлама панелінің мәтінін оқиды.</string>
+</resources>

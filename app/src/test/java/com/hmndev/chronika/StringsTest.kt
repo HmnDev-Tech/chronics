@@ -9,6 +9,7 @@ import com.hmndev.chronika.i18n.RU_STRINGS
 import com.hmndev.chronika.i18n.S
 import com.hmndev.chronika.i18n.ZH_STRINGS
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
@@ -47,6 +48,19 @@ class StringsTest {
                 val expected = placeholder.findAll(EN_STRINGS.getValue(key)).map { it.value }.toList()
                 val actual = placeholder.findAll(value).map { it.value }.toList()
                 assertEquals("$code/$key placeholder mismatch", expected, actual)
+            }
+        }
+    }
+
+    @Test
+    fun brandIsChronicsEverywhere() {
+        assertEquals("Chronics", EN_STRINGS.getValue("app.name"))
+        catalogs.forEach { (code, catalog) ->
+            assertEquals("$code app name", "Chronics", catalog.getValue("app.name"))
+            catalog.forEach { (key, value) ->
+                assertFalse("$code/$key still uses the old brand", value.contains("Chronika"))
+                assertFalse("$code/$key still uses the old brand", value.contains("Хроника"))
+                assertFalse("$code/$key still uses the old brand", value.contains("ХРОНИКА"))
             }
         }
     }
