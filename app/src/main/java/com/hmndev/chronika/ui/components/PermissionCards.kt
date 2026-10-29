@@ -28,6 +28,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import com.hmndev.chronika.i18n.S
 import com.hmndev.chronika.ui.theme.Lime
 
 data class PermissionStep(
@@ -104,7 +105,7 @@ fun PermissionStepCard(
                     if (step.granted) {
                         Icon(
                             imageVector = Icons.Rounded.Check,
-                            contentDescription = "Готово",
+                            contentDescription = S["common.done"],
                             tint = scheme.onPrimaryContainer,
                             modifier = Modifier.size(16.dp)
                         )
@@ -125,7 +126,7 @@ fun PermissionStepCard(
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Text(
-                    text = if (step.granted) "РАЗРЕШЕНО" else "НУЖНО РАЗРЕШЕНИЕ",
+                    text = if (step.granted) S["common.allowed"] else S["common.needs_permission"],
                     style = MaterialTheme.typography.labelSmall,
                     color = if (step.granted) scheme.primary else scheme.tertiary
                 )
@@ -151,7 +152,7 @@ fun SetupProgress(
     Column(modifier = modifier.fillMaxWidth()) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             Text(
-                text = "ГОТОВНОСТЬ",
+                text = S["permission.readiness"],
                 style = MaterialTheme.typography.labelSmall,
                 color = scheme.onSurfaceVariant,
                 modifier = Modifier.weight(1f)

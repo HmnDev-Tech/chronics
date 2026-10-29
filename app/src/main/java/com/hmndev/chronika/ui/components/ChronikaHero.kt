@@ -39,6 +39,8 @@ import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.hmndev.chronika.data.JournalStats
+import com.hmndev.chronika.i18n.S
+import com.hmndev.chronika.ui.LocalDeviceProfile
 import com.hmndev.chronika.ui.theme.Coral
 import com.hmndev.chronika.ui.theme.Lime
 
@@ -49,6 +51,7 @@ fun ChronikaHero(
     onOpenInsights: () -> Unit = {}
 ) {
     val scheme = MaterialTheme.colorScheme
+    val device = LocalDeviceProfile.current
     val blob = MaterialShapes.Cookie9Sided.toShape(startAngle = 14)
     val transition = rememberInfiniteTransition(label = "live")
     val pulse by transition.animateFloat(
@@ -64,8 +67,8 @@ fun ChronikaHero(
     Box(
         modifier = modifier
             .fillMaxWidth()
-            .height(246.dp)
-            .clip(RoundedCornerShape(42.dp))
+            .height(device.heroHeight)
+            .clip(RoundedCornerShape(device.dp(42.dp)))
             .background(
                 Brush.linearGradient(
                     colors = listOf(
@@ -115,7 +118,7 @@ fun ChronikaHero(
         Column(
             modifier = Modifier
                 .align(Alignment.TopStart)
-                .padding(start = 24.dp, top = 22.dp, end = 140.dp)
+                .padding(start = device.dp(24.dp), top = device.dp(22.dp), end = device.dp(140.dp))
         ) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Box(
@@ -126,7 +129,7 @@ fun ChronikaHero(
                 )
                 Spacer(Modifier.size(7.dp))
                 Text(
-                    text = "ХРОНИКА / СЕГОДНЯ",
+                    text = S["hero.eyebrow"],
                     style = MaterialTheme.typography.labelSmall,
                     color = scheme.onSurfaceVariant
                 )
@@ -138,7 +141,7 @@ fun ChronikaHero(
                 color = scheme.onSurface
             )
             Text(
-                text = if (stats.today == 0) "пока тихо" else "уведомлений сохранено",
+                text = if (stats.today == 0) S["hero.quiet"] else S["hero.saved"],
                 style = MaterialTheme.typography.bodyMedium,
                 color = scheme.onSurfaceVariant
             )
@@ -147,18 +150,18 @@ fun ChronikaHero(
         Column(
             modifier = Modifier
                 .align(Alignment.BottomEnd)
-                .padding(end = 18.dp, bottom = 18.dp),
+                .padding(end = device.dp(18.dp), bottom = device.dp(18.dp)),
             horizontalAlignment = Alignment.End,
             verticalArrangement = Arrangement.spacedBy(8.dp)
         ) {
             HeroStat(
                 value = stats.total.toString(),
-                label = "всего",
+                label = S["hero.total"],
                 container = scheme.surface.copy(alpha = 0.78f)
             )
             HeroStat(
                 value = stats.apps.toString(),
-                label = "приложений",
+                label = S["hero.apps"],
                 container = scheme.secondaryContainer.copy(alpha = 0.92f),
                 modifier = Modifier.offset(x = (-16).dp)
             )
@@ -167,7 +170,7 @@ fun ChronikaHero(
         Surface(
             modifier = Modifier
                 .align(Alignment.BottomStart)
-                .padding(start = 24.dp, bottom = 22.dp),
+                .padding(start = device.dp(24.dp), bottom = device.dp(22.dp)),
             shape = RoundedCornerShape(50),
             color = scheme.primary,
             contentColor = scheme.onPrimary
@@ -177,7 +180,7 @@ fun ChronikaHero(
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(7.dp)
             ) {
-                Text("ПУЛЬС", style = MaterialTheme.typography.labelSmall)
+                Text(S["hero.pulse"], style = MaterialTheme.typography.labelSmall)
                 Box(
                     Modifier
                         .size(5.dp)

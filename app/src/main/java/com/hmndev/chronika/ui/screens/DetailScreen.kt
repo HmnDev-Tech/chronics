@@ -64,6 +64,8 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.hmndev.chronika.data.JournalEntry
+import com.hmndev.chronika.i18n.S
+import com.hmndev.chronika.ui.LocalDeviceProfile
 import com.hmndev.chronika.ui.components.AppIcon
 import com.hmndev.chronika.ui.components.MetaPill
 import com.hmndev.chronika.ui.theme.Coral
@@ -84,6 +86,7 @@ fun DetailScreen(
     onExport: () -> Unit
 ) {
     val scheme = MaterialTheme.colorScheme
+    val device = LocalDeviceProfile.current
     val context = LocalContext.current
     var showDelete by remember { mutableStateOf(false) }
     var showRaw by remember { mutableStateOf(false) }
@@ -100,31 +103,31 @@ fun DetailScreen(
                 modifier = Modifier
                     .fillMaxWidth()
                     .statusBarsPadding()
-                    .padding(horizontal = 10.dp, vertical = 8.dp),
+                    .padding(horizontal = device.dp(10.dp), vertical = device.dp(8.dp)),
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 IconButton(onClick = onBack) {
-                    Icon(Icons.Rounded.ArrowBack, contentDescription = "Назад")
+                    Icon(Icons.Rounded.ArrowBack, contentDescription = S["common.back"])
                 }
                 Spacer(Modifier.weight(1f))
                 IconButton(onClick = onPin) {
                     Icon(
                         Icons.Rounded.PushPin,
-                        contentDescription = "Закрепить",
+                        contentDescription = if (entry.isPinned) S["common.unpin"] else S["common.pin"],
                         tint = if (entry.isPinned) scheme.primary else scheme.onSurfaceVariant
                     )
                 }
                 IconButton(onClick = onArchive) {
                     Icon(
                         Icons.Rounded.Archive,
-                        contentDescription = "В архив",
+                        contentDescription = S["detail.archive"],
                         tint = if (entry.isArchived) scheme.tertiary else scheme.onSurfaceVariant
                     )
                 }
                 IconButton(onClick = { showDelete = true }) {
                     Icon(
                         Icons.Rounded.Delete,
-                        contentDescription = "Удалить",
+                        contentDescription = S["common.delete"],
                         tint = scheme.error
                     )
                 }
@@ -132,7 +135,11 @@ fun DetailScreen(
 
             LazyColumn(
                 modifier = Modifier.weight(1f),
-                contentPadding = PaddingValues(start = 18.dp, end = 18.dp, bottom = 20.dp),
+                contentPadding = PaddingValues(
+                    start = device.screenPadding,
+                    end = device.screenPadding,
+                    bottom = device.dp(20.dp)
+                ),
                 verticalArrangement = Arrangement.spacedBy(12.dp)
             ) {
                 item(key = "header") {
@@ -150,7 +157,7 @@ fun DetailScreen(
                                 color = scheme.primary
                             )
                             Text(
-                                text = entry.displayTitle.ifBlank { "Без заголовка" },
+                                text = entry.displayTitle.ifBlank { S["common.no_title"] },
                                 style = MaterialTheme.typography.headlineMedium,
                                 color = scheme.onSurface
                             )
@@ -180,14 +187,14 @@ fun DetailScreen(
                         )
                         if (entry.isPinned) {
                             MetaPill(
-                                text = "закреплено",
+                                text = S["detail.pinned"],
                                 container = scheme.primaryContainer,
                                 content = scheme.onPrimaryContainer
                             )
                         }
                         if (entry.isOngoing) {
                             MetaPill(
-                                text = "постоянное",
+                                text = S["detail.ongoing"],
                                 container = scheme.tertiaryContainer,
                                 content = scheme.onTertiaryContainer
                             )
@@ -198,7 +205,7 @@ fun DetailScreen(
                 if (entry.conversationTitle.isNotBlank()) {
                     item(key = "conversation") {
                         Text(
-                            text = "Беседа · ${entry.conversationTitle}",
+                            text = S.f("detail.conversation", entry.conversationTitle),
                             style = MaterialTheme.typography.titleSmall,
                             color = scheme.tertiary
                         )
@@ -225,7 +232,7 @@ fun DetailScreen(
                 if (messages.isNotEmpty()) {
                     item(key = "messagesTitle") {
                         Text(
-                            text = "СООБЩЕНИЯ · ${messages.size}",
+                            text = S.f("detail.messages", messages.size),
                             style = MaterialTheme.typography.labelSmall,
                             color = scheme.onSurfaceVariant
                         )
@@ -238,7 +245,7 @@ fun DetailScreen(
                 if (images.isNotEmpty()) {
                     item(key = "imagesTitle") {
                         Text(
-                            text = "ВЛОЖЕНИЯ · ${images.size}",
+                            text = S.f("detail.attachments", images.size),
                             style = MaterialTheme.typography.labelSmall,
                             color = scheme.onSurfaceVariant
                         )
@@ -252,7 +259,7 @@ fun DetailScreen(
                     item(key = "actions") {
                         Column {
                             Text(
-                                text = "ДЕЙСТВИЯ УВЕДОМЛЕНИЯ",
+                                text = S["detail.actions"],
                                 style = MaterialTheme.typography.labelSmall,
                                 color = scheme.onSurfaceVariant
                             )
@@ -277,14 +284,14 @@ fun DetailScreen(
                         modifier = Modifier.fillMaxWidth()
                     ) {
                         Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                            MetaRow("Пакет", entry.packageName)
-                            MetaRow("Канал", entry.channelName.ifBlank { entry.channelId })
-                            MetaRow("Категория", entry.category.ifBlank { "—" })
-                            MetaRow("Захвачено", TimeTools.full(entry.capturedAt))
+                            MetaRow(S["detail.package"], entry.packageName)
+                            MetaRow(S["detail.channel"], entry.channelName.ifBlank { entry.channelId })
+                            MetaRow(S["detail.category"], entry.category.ifBlank { "—" })
+                            MetaRow(S["detail.captured"], TimeTools.full(entry.capturedAt))
                             if (entry.exportPath.isNotBlank()) {
-                                MetaRow("Файл", entry.exportPath)
+                                MetaRow(S["detail.file"], entry.exportPath)
                             }
-                            MetaRow("Отпечаток", entry.fingerprint.take(24) + "…")
+                            MetaRow(S["detail.fingerprint"], entry.fingerprint.take(24) + "…")
                         }
                     }
                 }
@@ -301,7 +308,7 @@ fun DetailScreen(
                                 verticalAlignment = Alignment.CenterVertically
                             ) {
                                 Text(
-                                    text = "СЫРЫЕ ДАННЫЕ",
+                                    text = S["detail.raw"],
                                     style = MaterialTheme.typography.labelSmall,
                                     color = scheme.onSurfaceVariant,
                                     modifier = Modifier.weight(1f)
@@ -309,7 +316,7 @@ fun DetailScreen(
                                 IconButton(onClick = { showRaw = !showRaw }) {
                                     Icon(
                                         imageVector = Icons.Rounded.ExpandMore,
-                                        contentDescription = "Показать",
+                                        contentDescription = S["detail.show"],
                                         tint = scheme.onSurfaceVariant
                                     )
                                 }
@@ -335,7 +342,7 @@ fun DetailScreen(
                 modifier = Modifier
                     .fillMaxWidth()
                     .navigationBarsPadding()
-                    .padding(horizontal = 18.dp, vertical = 10.dp),
+                    .padding(horizontal = device.screenPadding, vertical = device.dp(10.dp)),
                 horizontalArrangement = Arrangement.spacedBy(8.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
@@ -348,7 +355,7 @@ fun DetailScreen(
                 ) {
                     Icon(Icons.Rounded.ContentCopy, contentDescription = null, modifier = Modifier.size(17.dp))
                     Spacer(Modifier.width(6.dp))
-                    Text("Копировать")
+                    Text(S["detail.copy"])
                 }
                 Button(
                     onClick = onExport,
@@ -357,7 +364,7 @@ fun DetailScreen(
                 ) {
                     Icon(Icons.Rounded.Download, contentDescription = null, modifier = Modifier.size(17.dp))
                     Spacer(Modifier.width(6.dp))
-                    Text("В Downloads")
+                    Text(S["detail.downloads"])
                 }
             }
         }
@@ -366,18 +373,18 @@ fun DetailScreen(
     if (showDelete) {
         AlertDialog(
             onDismissRequest = { showDelete = false },
-            title = { Text("Удалить запись?") },
-            text = { Text("Запись исчезнет из журнала. Файлы в Downloads останутся.") },
+            title = { Text(S["detail.delete_title"]) },
+            text = { Text(S["detail.delete_body"]) },
             confirmButton = {
                 TextButton(
                     onClick = {
                         showDelete = false
                         onDelete()
                     }
-                ) { Text("Удалить", color = MaterialTheme.colorScheme.error) }
+                ) { Text(S["common.delete"], color = MaterialTheme.colorScheme.error) }
             },
             dismissButton = {
-                TextButton(onClick = { showDelete = false }) { Text("Отмена") }
+                TextButton(onClick = { showDelete = false }) { Text(S["common.cancel"]) }
             }
         )
     }
@@ -402,7 +409,7 @@ private fun MessageTape(message: com.hmndev.chronika.util.MessageView) {
             Column(Modifier.weight(1f)) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Text(
-                        text = message.sender.ifBlank { "Без имени" },
+                        text = message.sender.ifBlank { S["common.unnamed"] },
                         style = MaterialTheme.typography.labelMedium,
                         color = scheme.primary,
                         fontWeight = FontWeight.Bold
@@ -462,7 +469,7 @@ private fun LocalImage(path: String) {
     if (bitmap != null) {
         Image(
             bitmap = bitmap!!,
-            contentDescription = "Вложение",
+            contentDescription = S["common.attachment"],
             contentScale = ContentScale.FillWidth,
             modifier = Modifier
                 .fillMaxWidth()
@@ -490,5 +497,5 @@ private fun copyToClipboard(context: Context, entry: JournalEntry) {
         }
     }
     val clipboard = context.getSystemService(ClipboardManager::class.java)
-    clipboard?.setPrimaryClip(ClipData.newPlainText("Хроника", text))
+    clipboard?.setPrimaryClip(ClipData.newPlainText(S["app.name"], text))
 }

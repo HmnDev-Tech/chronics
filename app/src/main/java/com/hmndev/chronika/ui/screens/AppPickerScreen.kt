@@ -45,6 +45,8 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import com.hmndev.chronika.i18n.S
+import com.hmndev.chronika.ui.LocalDeviceProfile
 import com.hmndev.chronika.ui.components.AppIcon
 import com.hmndev.chronika.ui.theme.Coral
 import com.hmndev.chronika.ui.theme.Lime
@@ -66,6 +68,7 @@ fun AppPickerScreen(
 ) {
     val context = LocalContext.current
     val scheme = MaterialTheme.colorScheme
+    val device = LocalDeviceProfile.current
     var query by rememberSaveable { mutableStateOf("") }
     val apps by produceState<List<InstalledApp>>(emptyList()) {
         value = withContext(Dispatchers.IO) { loadLaunchableApps(context) }
@@ -90,20 +93,20 @@ fun AppPickerScreen(
                 modifier = Modifier
                     .fillMaxWidth()
                     .statusBarsPadding()
-                    .padding(horizontal = 10.dp, vertical = 8.dp),
+                    .padding(horizontal = device.dp(10.dp), vertical = device.dp(8.dp)),
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 IconButton(onClick = onBack) {
-                    Icon(Icons.Rounded.ArrowBack, contentDescription = "Назад")
+                    Icon(Icons.Rounded.ArrowBack, contentDescription = S["common.back"])
                 }
                 Column(Modifier.weight(1f)) {
                     Text(
-                        text = "ПРИЛОЖЕНИЯ",
+                        text = S["picker.eyebrow"],
                         style = MaterialTheme.typography.labelSmall,
                         color = scheme.primary
                     )
                     Text(
-                        text = if (includedOnly) "Белый список" else "Исключения",
+                        text = if (includedOnly) S["picker.whitelist"] else S["picker.exceptions"],
                         style = MaterialTheme.typography.headlineSmall,
                         fontWeight = FontWeight.Bold
                     )
@@ -118,18 +121,18 @@ fun AppPickerScreen(
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(horizontal = 18.dp),
+                    .padding(horizontal = device.screenPadding),
                 horizontalArrangement = Arrangement.spacedBy(8.dp)
             ) {
                 ModeButton(
-                    title = "Исключать",
+                    title = S["picker.exclude"],
                     selected = !includedOnly,
                     accent = Coral,
                     onClick = { onSetIncludedOnly(false) },
                     modifier = Modifier.weight(1f)
                 )
                 ModeButton(
-                    title = "Только выбранные",
+                    title = S["picker.only_selected"],
                     selected = includedOnly,
                     accent = Lime,
                     onClick = { onSetIncludedOnly(true) },
@@ -142,33 +145,37 @@ fun AppPickerScreen(
                 onValueChange = { query = it },
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(horizontal = 18.dp),
+                    .padding(horizontal = device.screenPadding),
                 singleLine = true,
                 shape = CircleShape,
-                placeholder = { Text("Поиск приложения…") },
+                placeholder = { Text(S["picker.search"]) },
                 leadingIcon = { Icon(Icons.Rounded.Search, contentDescription = null) },
                 trailingIcon = {
                     if (query.isNotBlank()) {
                         IconButton(onClick = { query = "" }) {
-                            Icon(Icons.Rounded.Close, contentDescription = "Очистить")
+                            Icon(Icons.Rounded.Close, contentDescription = S["common.close"])
                         }
                     }
                 }
             )
             Text(
                 text = if (includedOnly) {
-                    "Сохраняются уведомления только отмеченных приложений."
+                    S["picker.whitelist_note"]
                 } else {
-                    "Отмеченные приложения не попадают в журнал."
+                    S["picker.exceptions_note"]
                 },
                 style = MaterialTheme.typography.bodySmall,
                 color = scheme.onSurfaceVariant,
-                modifier = Modifier.padding(horizontal = 22.dp, vertical = 8.dp)
+                modifier = Modifier.padding(horizontal = device.dp(22.dp), vertical = device.dp(8.dp))
             )
 
             LazyColumn(
                 modifier = Modifier.weight(1f),
-                contentPadding = PaddingValues(start = 18.dp, end = 18.dp, bottom = 16.dp),
+                contentPadding = PaddingValues(
+                    start = device.screenPadding,
+                    end = device.screenPadding,
+                    bottom = device.dp(16.dp)
+                ),
                 verticalArrangement = Arrangement.spacedBy(6.dp)
             ) {
                 items(filtered, key = { it.packageName }) { app ->
@@ -219,7 +226,7 @@ fun AppPickerScreen(
                 if (filtered.isEmpty()) {
                     item(key = "empty") {
                         Text(
-                            text = "Ничего не найдено",
+                            text = S["common.nothing_found"],
                             style = MaterialTheme.typography.bodyMedium,
                             color = scheme.onSurfaceVariant,
                             modifier = Modifier.padding(16.dp)
@@ -234,9 +241,9 @@ fun AppPickerScreen(
                 modifier = Modifier
                     .fillMaxWidth()
                     .navigationBarsPadding()
-                    .padding(horizontal = 18.dp, vertical = 10.dp)
+                    .padding(horizontal = device.screenPadding, vertical = device.dp(10.dp))
             ) {
-                Text("Готово")
+                Text(S["common.done"])
             }
         }
     }

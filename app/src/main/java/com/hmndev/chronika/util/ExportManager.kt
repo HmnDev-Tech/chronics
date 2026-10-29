@@ -9,6 +9,7 @@ import android.os.Environment
 import android.provider.MediaStore
 import com.hmndev.chronika.data.AppSettings
 import com.hmndev.chronika.data.JournalEntry
+import com.hmndev.chronika.i18n.S
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import org.json.JSONArray
@@ -92,9 +93,9 @@ object ExportManager {
                 root.toString(2).toByteArray(Charsets.UTF_8)
             )
             val text = buildString {
-                appendLine("ХРОНИКА · ЭКСПОРТ")
-                appendLine("Записей: ${entries.size}")
-                appendLine("Дата: ${TimeTools.full(System.currentTimeMillis())}")
+                appendLine(S["export.header"])
+                appendLine(S.f("export.entries", entries.size))
+                appendLine(S.f("export.date", TimeTools.full(System.currentTimeMillis())))
                 appendLine()
                 entries.forEach { entry ->
                     appendLine("=".repeat(60))
@@ -149,28 +150,33 @@ object ExportManager {
     }
 
     private fun entryText(entry: JournalEntry, images: List<String>): String = buildString {
-        appendLine("ХРОНИКА · ${entry.appLabel}")
-        appendLine("Пакет: ${entry.packageName}")
-        appendLine("Время: ${TimeTools.full(entry.postedAt)}")
-        appendLine("Источник: ${entry.source}")
-        if (entry.channelName.isNotBlank()) appendLine("Канал: ${entry.channelName}")
-        if (entry.category.isNotBlank()) appendLine("Категория: ${entry.category}")
-        if (entry.conversationTitle.isNotBlank()) appendLine("Беседа: ${entry.conversationTitle}")
-        appendLine("Статус: ${if (entry.isOngoing) "постоянное" else "обычное"}, " +
-            "${if (entry.isClearable) "снимаемое" else "неснимаемое"}")
+        appendLine(S.f("export.app", entry.appLabel))
+        appendLine(S.f("export.package", entry.packageName))
+        appendLine(S.f("export.time", TimeTools.full(entry.postedAt)))
+        appendLine(S.f("export.source", EntryFormat.sourceLabel(entry.source)))
+        if (entry.channelName.isNotBlank()) appendLine(S.f("export.channel", entry.channelName))
+        if (entry.category.isNotBlank()) appendLine(S.f("export.category", entry.category))
+        if (entry.conversationTitle.isNotBlank()) appendLine(S.f("export.conversation", entry.conversationTitle))
+        appendLine(
+            S.f(
+                "export.status",
+                S[if (entry.isOngoing) "export.ongoing" else "export.normal"],
+                S[if (entry.isClearable) "export.clearable" else "export.sticky"]
+            )
+        )
         appendLine("-".repeat(60))
         if (entry.title.isNotBlank()) appendLine(entry.title)
         if (entry.displayBody.isNotBlank()) appendLine(entry.displayBody)
         val messages = runCatching { JSONArray(entry.messagesJson) }.getOrElse { JSONArray() }
         if (messages.length() > 0) {
             appendLine()
-            appendLine("СООБЩЕНИЯ")
+            appendLine(S["export.messages"])
             for (i in 0 until messages.length()) {
                 val message = messages.optJSONObject(i) ?: continue
                 val sender = message.optString("sender")
                 val text = message.optString("text")
                 val time = message.optLong("time")
-                appendLine("• ${if (sender.isBlank()) "Без имени" else sender}" +
+                appendLine("• ${if (sender.isBlank()) S["common.unnamed"] else sender}" +
                     if (time > 0) " · ${TimeTools.time(time)}" else "")
                 if (text.isNotBlank()) appendLine("  $text")
             }
@@ -178,17 +184,17 @@ object ExportManager {
         val actions = runCatching { JSONArray(entry.actionsJson) }.getOrElse { JSONArray() }
         if (actions.length() > 0) {
             appendLine()
-            appendLine("ДЕЙСТВИЯ: " + (0 until actions.length()).joinToString(" · ") {
+            appendLine(S.f("export.actions", (0 until actions.length()).joinToString(" · ") {
                 actions.optString(it)
-            })
+            }))
         }
         if (images.isNotEmpty()) {
             appendLine()
-            appendLine("ВЛОЖЕНИЯ:")
+            appendLine(S["export.attachments"])
             images.forEach { appendLine(it) }
         }
         appendLine()
-        appendLine("Отпечаток: ${entry.fingerprint}")
+        appendLine(S.f("export.fingerprint", entry.fingerprint))
     }
 
     private fun saveImages(
@@ -251,9 +257,9 @@ object ExportManager {
                 put(MediaStore.MediaColumns.IS_PENDING, 1)
             }
             val uri = resolver.insert(collection, values)
-                ?: throw IllegalStateException("MediaStore отклонил файл $name")
+                ?: throw IllegalStateException(S.f("export.mediastore_rejected", name))
             resolver.openOutputStream(uri)?.use { it.write(bytes) }
-                ?: throw IllegalStateException("Нет доступа к $name")
+                ?: throw IllegalStateException(S.f("export.no_access", name))
             values.clear()
             values.put(MediaStore.MediaColumns.IS_PENDING, 0)
             resolver.update(uri, values, null, null)
@@ -264,7 +270,7 @@ object ExportManager {
             )
             val dir = File(downloads, relativeDir)
             if (!dir.exists() && !dir.mkdirs()) {
-                throw IllegalStateException("Не удалось создать ${dir.absolutePath}")
+                throw IllegalStateException(S.f("export.mkdir_failed", dir.absolutePath))
             }
             val file = File(dir, name)
             FileOutputStream(file).use { it.write(bytes) }

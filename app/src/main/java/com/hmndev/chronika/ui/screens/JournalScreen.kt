@@ -45,6 +45,8 @@ import androidx.compose.ui.unit.dp
 import com.hmndev.chronika.data.AppSettings
 import com.hmndev.chronika.data.JournalEntry
 import com.hmndev.chronika.data.JournalStats
+import com.hmndev.chronika.i18n.S
+import com.hmndev.chronika.ui.LocalDeviceProfile
 import com.hmndev.chronika.ui.components.ChronikaHero
 import com.hmndev.chronika.ui.components.EmptyJournal
 import com.hmndev.chronika.ui.components.FilterLens
@@ -70,6 +72,7 @@ fun JournalScreen(
     onTest: () -> Unit,
     onOpenInsights: () -> Unit
 ) {
+    val device = LocalDeviceProfile.current
     var query by rememberSaveable { mutableStateOf("") }
     var filter by remember { mutableStateOf(JournalFilter.ALL) }
 
@@ -91,11 +94,11 @@ fun JournalScreen(
     }
 
     LazyColumn(
-        contentPadding = PaddingValues(bottom = 126.dp),
+        contentPadding = PaddingValues(bottom = device.dp(126.dp)),
         verticalArrangement = Arrangement.spacedBy(0.dp)
     ) {
         item(key = "hero") {
-            Column(Modifier.padding(horizontal = 18.dp, vertical = 12.dp)) {
+            Column(Modifier.padding(horizontal = device.screenPadding, vertical = device.dp(12.dp))) {
                 ChronikaHero(
                     stats = stats,
                     onOpenInsights = onOpenInsights
@@ -114,7 +117,7 @@ fun JournalScreen(
                     shape = CircleShape,
                     placeholder = {
                         Text(
-                            text = "Найти в архиве…",
+                            text = S["journal.search"],
                             style = MaterialTheme.typography.bodyMedium
                         )
                     },
@@ -124,7 +127,7 @@ fun JournalScreen(
                     trailingIcon = {
                         if (query.isNotBlank()) {
                             IconButton(onClick = { query = "" }) {
-                                Icon(Icons.Rounded.Close, contentDescription = "Очистить")
+                                Icon(Icons.Rounded.Close, contentDescription = S["common.close"])
                             }
                         }
                     }
@@ -144,18 +147,18 @@ fun JournalScreen(
 
         if (pinned.isNotEmpty()) {
             item(key = "pinnedHeading") {
-                Column(Modifier.padding(horizontal = 18.dp)) {
+                Column(Modifier.padding(horizontal = device.screenPadding)) {
                     Spacer(Modifier.height(12.dp))
                     SectionHeading(
-                        eyebrow = "ЗАКРЕПЛЕНО",
-                        title = "Держим под рукой"
+                        eyebrow = S["journal.pinned_eyebrow"],
+                        title = S["journal.pinned_title"]
                     )
                     Spacer(Modifier.height(10.dp))
                 }
             }
             item(key = "pinnedRow") {
                 LazyRow(
-                    contentPadding = PaddingValues(horizontal = 18.dp),
+                    contentPadding = PaddingValues(horizontal = device.screenPadding),
                     horizontalArrangement = Arrangement.spacedBy(10.dp)
                 ) {
                     items(pinned, key = { "pin-${it.id}" }) { entry ->
@@ -172,7 +175,7 @@ fun JournalScreen(
 
         if (filtered.isEmpty()) {
             item(key = "empty") {
-                Column(Modifier.padding(horizontal = 18.dp, vertical = 8.dp)) {
+                Column(Modifier.padding(horizontal = device.screenPadding, vertical = device.dp(8.dp))) {
                     if (entries.isEmpty()) {
                         EmptyJournal(onTest = onTest, onOpenSettings = onOpenSettings)
                     } else {
@@ -183,11 +186,11 @@ fun JournalScreen(
                         ) {
                             Column(Modifier.padding(22.dp)) {
                                 Text(
-                                    text = "Ничего не найдено",
+                                    text = S["journal.empty_title"],
                                     style = MaterialTheme.typography.headlineSmall
                                 )
                                 Text(
-                                    text = "Попробуйте другой запрос или снимите фильтр.",
+                                    text = S["journal.empty_body"],
                                     style = MaterialTheme.typography.bodyMedium,
                                     color = MaterialTheme.colorScheme.onSurfaceVariant
                                 )
@@ -219,10 +222,11 @@ fun JournalScreen(
 
 @Composable
 private fun DayHeader(label: String, count: Int) {
+    val device = LocalDeviceProfile.current
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(start = 18.dp, end = 18.dp, top = 18.dp, bottom = 8.dp),
+            .padding(start = device.screenPadding, end = device.screenPadding, top = device.dp(18.dp), bottom = device.dp(8.dp)),
         verticalAlignment = Alignment.CenterVertically
     ) {
         Text(
@@ -253,10 +257,11 @@ private fun CaptureBanner(
     enabled: Boolean,
     onOpenSettings: () -> Unit
 ) {
+    val device = LocalDeviceProfile.current
     Surface(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(horizontal = 18.dp, vertical = 6.dp),
+            .padding(horizontal = device.screenPadding, vertical = device.dp(6.dp)),
         shape = RoundedCornerShape(24.dp),
         color = MaterialTheme.colorScheme.tertiaryContainer
     ) {
@@ -272,22 +277,22 @@ private fun CaptureBanner(
             Spacer(Modifier.width(10.dp))
             Column(Modifier.weight(1f)) {
                 Text(
-                    text = if (!enabled) "Захват выключен" else "Нет доступа к уведомлениям",
+                    text = if (!enabled) S["journal.capture_off"] else S["journal.no_access"],
                     style = MaterialTheme.typography.titleSmall,
                     color = MaterialTheme.colorScheme.onTertiaryContainer
                 )
                 Text(
                     text = if (!enabled) {
-                        "Включите его в настройках, чтобы журнал пополнялся."
+                        S["journal.capture_off_body"]
                     } else {
-                        "Разрешите Хронике слушать уведомления."
+                        S["journal.no_access_body"]
                     },
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onTertiaryContainer.copy(alpha = 0.8f)
                 )
             }
             TextButton(onClick = onOpenSettings) {
-                Text("Открыть")
+                Text(S["journal.open"])
             }
         }
     }
@@ -299,9 +304,10 @@ private fun PinnedMiniCard(
     onClick: () -> Unit,
     onPin: () -> Unit
 ) {
+    val device = LocalDeviceProfile.current
     Surface(
         modifier = Modifier
-            .width(216.dp)
+            .width(device.dp(216.dp))
             .clickable(onClick = onClick),
         shape = RoundedCornerShape(26.dp),
         color = MaterialTheme.colorScheme.primaryContainer
@@ -319,7 +325,7 @@ private fun PinnedMiniCard(
                 IconButton(onClick = onPin, modifier = Modifier.size(26.dp)) {
                     Icon(
                         imageVector = Icons.Rounded.PushPin,
-                        contentDescription = "Открепить",
+                        contentDescription = S["common.unpin"],
                         modifier = Modifier.size(14.dp),
                         tint = MaterialTheme.colorScheme.onPrimaryContainer
                     )
@@ -358,7 +364,7 @@ private fun PinnedMiniCard(
                 )
                 Spacer(Modifier.weight(1f))
                 Text(
-                    text = "ЗАКРЕП",
+                    text = S["journal.pin_badge"],
                     style = MaterialTheme.typography.labelSmall,
                     color = Coral
                 )

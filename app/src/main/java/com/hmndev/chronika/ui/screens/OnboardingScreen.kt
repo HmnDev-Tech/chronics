@@ -39,7 +39,9 @@ import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import com.hmndev.chronika.i18n.S
 import com.hmndev.chronika.shizuku.ShizukuState
+import com.hmndev.chronika.ui.LocalDeviceProfile
 import com.hmndev.chronika.ui.components.AccentDot
 import com.hmndev.chronika.ui.components.PermissionStep
 import com.hmndev.chronika.ui.components.PermissionStepCard
@@ -63,34 +65,35 @@ fun OnboardingScreen(
     onFinish: () -> Unit
 ) {
     val scheme = MaterialTheme.colorScheme
+    val device = LocalDeviceProfile.current
     val shizukuReady = shizuku.available && shizuku.permissionGranted
     val steps = listOf(
         PermissionStep(
-            title = "Слушатель уведомлений",
-            description = "Главный источник: заголовки, полные тексты, переписка, кнопки и каналы.",
+            title = S["onboarding.listener"],
+            description = S["onboarding.listener_desc"],
             granted = access.listener,
-            actionLabel = if (access.listener) "Проверить" else "Открыть",
+            actionLabel = if (access.listener) S["common.check"] else S["common.open"],
             icon = Icons.Rounded.NotificationsActive,
             accent = Lime,
             onAction = onOpenNotificationSettings
         ),
         PermissionStep(
-            title = "Служба доступности",
-            description = "Страховка: ловит текст, если уведомление исчезло раньше, чем его прочитал слушатель.",
+            title = S["onboarding.accessibility"],
+            description = S["onboarding.accessibility_desc"],
             granted = access.accessibility,
-            actionLabel = if (access.accessibility) "Проверить" else "Открыть",
+            actionLabel = if (access.accessibility) S["common.check"] else S["common.open"],
             icon = Icons.Rounded.Accessibility,
             accent = Coral,
             onAction = onOpenAccessibilitySettings
         ),
         PermissionStep(
             title = "Shizuku",
-            description = "Необязательно. Позволяет выдать доступы и импортировать текущую панель одной кнопкой.",
+            description = S["onboarding.shizuku_desc"],
             granted = shizukuReady,
             actionLabel = when {
-                !shizuku.available -> "Открыть"
-                !shizuku.permissionGranted -> "Разрешить"
-                else -> "Готово"
+                !shizuku.available -> S["common.open"]
+                !shizuku.permissionGranted -> S["common.allow"]
+                else -> S["common.done"]
             },
             icon = Icons.Rounded.Terminal,
             accent = scheme.tertiary,
@@ -109,12 +112,17 @@ fun OnboardingScreen(
         modifier = Modifier
             .statusBarsPadding()
             .navigationBarsPadding(),
-        contentPadding = PaddingValues(start = 20.dp, end = 20.dp, top = 28.dp, bottom = 32.dp),
-        verticalArrangement = Arrangement.spacedBy(14.dp)
+        contentPadding = PaddingValues(
+            start = device.screenPadding,
+            end = device.screenPadding,
+            top = device.dp(28.dp),
+            bottom = device.dp(32.dp)
+        ),
+        verticalArrangement = Arrangement.spacedBy(device.dp(14.dp))
     ) {
         item(key = "hero") {
             Surface(
-                shape = RoundedCornerShape(40.dp),
+                shape = RoundedCornerShape(device.dp(40.dp)),
                 color = scheme.surfaceContainerLow,
                 modifier = Modifier.fillMaxWidth()
             ) {
@@ -149,32 +157,31 @@ fun OnboardingScreen(
                             style = Stroke(width = 2.dp.toPx(), cap = StrokeCap.Round)
                         )
                     }
-                    Column(Modifier.padding(24.dp)) {
+                    Column(Modifier.padding(device.dp(24.dp))) {
                         Row(verticalAlignment = Alignment.CenterVertically) {
                             AccentDot(color = Coral, size = 8.dp)
                             Spacer(Modifier.width(7.dp))
                             Text(
-                                text = "ЛОКАЛЬНЫЙ АРХИВ УВЕДОМЛЕНИЙ",
+                                text = S["onboarding.eyebrow"],
                                 style = MaterialTheme.typography.labelSmall,
                                 color = scheme.onSurfaceVariant
                             )
                         }
                         Spacer(Modifier.height(18.dp))
                         Text(
-                            text = "ХРОНИКА",
+                            text = S["onboarding.title"],
                             style = MaterialTheme.typography.displayLarge,
                             color = scheme.onSurface
                         )
                         Text(
-                            text = "Ничего не теряется.",
+                            text = S["app.tagline"],
                             style = MaterialTheme.typography.headlineSmall,
                             fontWeight = FontWeight.Bold,
                             color = scheme.primary
                         )
                         Spacer(Modifier.height(10.dp))
                         Text(
-                            text = "Полные тексты уведомлений сохраняются в Downloads и в локальную базу. " +
-                                "Даже если сообщение удалят из чата — оно останется здесь.",
+                            text = S["onboarding.body"],
                             style = MaterialTheme.typography.bodyMedium,
                             color = scheme.onSurfaceVariant
                         )
@@ -207,11 +214,11 @@ fun OnboardingScreen(
                 ) {
                     Column(Modifier.weight(1f)) {
                         Text(
-                            text = "Уведомления Хроники",
+                            text = S["onboarding.post_title"],
                             style = MaterialTheme.typography.titleSmall
                         )
                         Text(
-                            text = "Нужны для тестовой проверки и служебного статуса.",
+                            text = S["onboarding.post_desc"],
                             style = MaterialTheme.typography.bodySmall,
                             color = scheme.onSurfaceVariant
                         )
@@ -221,7 +228,7 @@ fun OnboardingScreen(
                         shape = CircleShape,
                         enabled = !access.postNotifications
                     ) {
-                        Text(if (access.postNotifications) "Есть" else "Разрешить")
+                        Text(if (access.postNotifications) S["common.have"] else S["common.allow"])
                     }
                 }
             }
@@ -236,17 +243,17 @@ fun OnboardingScreen(
                 ) {
                     Column(Modifier.padding(16.dp)) {
                         Text(
-                            text = "SHIZUKU АКТИВЕН",
+                            text = S["onboarding.shizuku_active"],
                             style = MaterialTheme.typography.labelSmall,
                             color = scheme.onSecondaryContainer
                         )
                         Spacer(Modifier.height(8.dp))
                         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                             Button(onClick = onGrantListener, shape = CircleShape) {
-                                Text("Выдать слушатель")
+                                Text(S["settings.grant_listener"])
                             }
                             OutlinedButton(onClick = onGrantAccessibility, shape = CircleShape) {
-                                Text("Доступность")
+                                Text(S["onboarding.accessibility_short"])
                             }
                         }
                     }
@@ -261,7 +268,7 @@ fun OnboardingScreen(
                     shape = CircleShape,
                     modifier = Modifier.fillMaxWidth()
                 ) {
-                    Text("Войти в журнал")
+                    Text(S["onboarding.enter"])
                     Spacer(Modifier.width(6.dp))
                     Icon(
                         Icons.Rounded.ArrowForward,
@@ -274,11 +281,10 @@ fun OnboardingScreen(
                     shape = CircleShape,
                     modifier = Modifier.fillMaxWidth()
                 ) {
-                    Text("Отправить тестовое уведомление")
+                    Text(S["onboarding.test"])
                 }
                 Text(
-                    text = "Хроника работает без интернета. Доступ к уведомлениям можно " +
-                        "отозвать в любой момент в системных настройках.",
+                    text = S["onboarding.footnote"],
                     style = MaterialTheme.typography.bodySmall,
                     color = scheme.onSurfaceVariant
                 )

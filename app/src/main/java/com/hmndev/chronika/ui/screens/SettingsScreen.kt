@@ -1,5 +1,9 @@
 package com.hmndev.chronika.ui.screens
 
+import android.app.Activity
+import android.content.Context
+import android.content.ContextWrapper
+
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -54,13 +58,18 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.onFocusChanged
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.hmndev.chronika.BuildConfig
 import com.hmndev.chronika.data.AppSettings
+import com.hmndev.chronika.i18n.AppLanguage
+import com.hmndev.chronika.i18n.S
 import com.hmndev.chronika.shizuku.ShizukuManager
+import com.hmndev.chronika.ui.LocalDeviceProfile
+import com.hmndev.chronika.ui.ScreenClass
 import com.hmndev.chronika.ui.components.SettingAction
 import com.hmndev.chronika.ui.components.SettingIcon
 import com.hmndev.chronika.ui.components.SettingSwitch
@@ -70,6 +79,7 @@ import com.hmndev.chronika.ui.components.SettingsSection
 import com.hmndev.chronika.ui.theme.Coral
 import com.hmndev.chronika.ui.theme.Lime
 import com.hmndev.chronika.util.AccessState
+import kotlin.math.roundToInt
 
 @Composable
 fun SettingsScreen(
@@ -90,6 +100,9 @@ fun SettingsScreen(
     onOpenUrl: (String) -> Unit
 ) {
     val scheme = MaterialTheme.colorScheme
+    val device = LocalDeviceProfile.current
+    val context = LocalContext.current
+    val currentLanguage = AppLanguage.resolve(settings.language)
     val shizuku by ShizukuManager.state.collectAsState()
     var showDelete by remember { mutableStateOf(false) }
     var retentionDraft by remember(settings.retentionDays) {
@@ -97,6 +110,9 @@ fun SettingsScreen(
     }
     var maxEntriesDraft by remember(settings.maxEntries) {
         mutableStateOf(settings.maxEntries.toString())
+    }
+    var scaleDraft by remember(settings.uiScale) {
+        mutableStateOf(settings.uiScale)
     }
     val focusManager = LocalFocusManager.current
 
@@ -110,23 +126,28 @@ fun SettingsScreen(
     }
 
     LazyColumn(
-        contentPadding = PaddingValues(start = 18.dp, end = 18.dp, top = 14.dp, bottom = 126.dp),
+        contentPadding = PaddingValues(
+            start = device.screenPadding,
+            end = device.screenPadding,
+            top = device.dp(14.dp),
+            bottom = device.dp(126.dp)
+        ),
         verticalArrangement = Arrangement.spacedBy(0.dp)
     ) {
         item(key = "heading") {
             Column {
                 Text(
-                    text = "ПУЛЬТ",
+                    text = S["settings.eyebrow"],
                     style = MaterialTheme.typography.labelSmall,
                     color = scheme.primary
                 )
                 Text(
-                    text = "Настройки",
+                    text = S["settings.title"],
                     style = MaterialTheme.typography.displaySmall,
                     color = scheme.onSurface
                 )
                 Text(
-                    text = "Захват, фильтры, хранилище и доступы.",
+                    text = S["settings.subtitle"],
                     style = MaterialTheme.typography.bodyMedium,
                     color = scheme.onSurfaceVariant
                 )
@@ -136,20 +157,20 @@ fun SettingsScreen(
 
         item(key = "access") {
             SettingsSection(
-                title = "Доступы",
-                subtitle = "Без них журнал не увидит уведомления",
+                title = S["settings.access"],
+                subtitle = S["settings.access_sub"],
                 accent = Coral
             ) {
                 AccessRow(
-                    title = "Слушатель уведомлений",
-                    description = "Основной источник полных текстов",
+                    title = S["settings.listener"],
+                    description = S["settings.listener_desc"],
                     granted = access.listener,
                     onClick = onOpenNotificationSettings
                 )
                 SettingsGroupDivider()
                 AccessRow(
-                    title = "Служба доступности",
-                    description = "Страховка для быстрых и удалённых уведомлений",
+                    title = S["settings.accessibility"],
+                    description = S["settings.accessibility_desc"],
                     granted = access.accessibility,
                     onClick = onOpenAccessibilitySettings
                 )
@@ -166,7 +187,7 @@ fun SettingsScreen(
                         horizontalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
                         Button(onClick = onRequestShizuku, shape = CircleShape) {
-                            Text("Разрешить Shizuku")
+                            Text(S["settings.shizuku_allow"])
                         }
                     }
                 }
@@ -176,22 +197,22 @@ fun SettingsScreen(
                         horizontalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
                         FilledTonalButton(onClick = onGrantListener, shape = CircleShape) {
-                            Text("Выдать слушатель")
+                            Text(S["settings.grant_listener"])
                         }
                         FilledTonalButton(onClick = onGrantAccessibility, shape = CircleShape) {
-                            Text("Включить доступность")
+                            Text(S["settings.grant_access"])
                         }
                     }
                     SettingAction(
-                        title = "Импортировать активные",
-                        description = "Прочитать текущую панель через dumpsys notification",
+                        title = S["settings.import_active"],
+                        description = S["settings.import_active_desc"],
                         icon = Icons.Rounded.CloudDownload,
                         onClick = onImportShizuku
                     )
                 }
                 SettingAction(
-                    title = "Открыть Shizuku",
-                    description = "Установить, запустить или проверить сервис",
+                    title = S["settings.open_shizuku"],
+                    description = S["settings.open_shizuku_desc"],
                     icon = Icons.Rounded.Terminal,
                     onClick = onOpenShizuku
                 )
@@ -200,21 +221,21 @@ fun SettingsScreen(
 
         item(key = "capture") {
             SettingsSection(
-                title = "Захват",
-                subtitle = "Что и как сохранять",
+                title = S["settings.capture"],
+                subtitle = S["settings.capture_sub"],
                 accent = Lime
             ) {
                 SettingSwitch(
-                    title = "Захват включён",
-                    description = "Главный выключатель журнала",
+                    title = S["settings.capture_enabled"],
+                    description = S["settings.capture_enabled_desc"],
                     checked = settings.captureEnabled,
                     onCheckedChange = { value -> onUpdate { it.copy(captureEnabled = value) } },
                     icon = Icons.Rounded.NotificationsActive
                 )
                 SettingsGroupDivider()
                 SettingSwitch(
-                    title = "Слушатель уведомлений",
-                    description = "Полные заголовки, тексты, сообщения и действия",
+                    title = S["settings.listener"],
+                    description = S["settings.listener_desc2"],
                     checked = settings.captureListener,
                     onCheckedChange = { value -> onUpdate { it.copy(captureListener = value) } },
                     icon = Icons.Rounded.Bolt,
@@ -222,8 +243,8 @@ fun SettingsScreen(
                 )
                 SettingsGroupDivider()
                 SettingSwitch(
-                    title = "Служба доступности",
-                    description = "Текст событий уведомлений и панели",
+                    title = S["settings.accessibility"],
+                    description = S["settings.accessibility_desc2"],
                     checked = settings.captureAccessibility,
                     onCheckedChange = { value -> onUpdate { it.copy(captureAccessibility = value) } },
                     icon = Icons.Rounded.Accessibility,
@@ -231,8 +252,8 @@ fun SettingsScreen(
                 )
                 SettingsGroupDivider()
                 SettingSwitch(
-                    title = "Глубокий захват панели",
-                    description = "Читает текст открытой панели уведомлений (экспериментально)",
+                    title = S["settings.deep"],
+                    description = S["settings.deep_desc"],
                     checked = settings.deepAccessibility,
                     onCheckedChange = { value -> onUpdate { it.copy(deepAccessibility = value) } },
                     icon = Icons.Rounded.Tune,
@@ -240,48 +261,48 @@ fun SettingsScreen(
                 )
                 SettingsGroupDivider()
                 SettingSwitch(
-                    title = "Автоэкспорт в Downloads",
-                    description = "Каждая запись сразу получает JSON/TXT-файл",
+                    title = S["settings.autoexport"],
+                    description = S["settings.autoexport_desc"],
                     checked = settings.autoExport,
                     onCheckedChange = { value -> onUpdate { it.copy(autoExport = value) } },
                     icon = Icons.Rounded.Download
                 )
                 SettingsGroupDivider()
                 SettingSwitch(
-                    title = "Сохранять изображения",
-                    description = "Large icon и picture в папку media",
+                    title = S["settings.images"],
+                    description = S["settings.images_desc"],
                     checked = settings.saveImages,
                     onCheckedChange = { value -> onUpdate { it.copy(saveImages = value) } },
                     icon = Icons.Rounded.ColorLens
                 )
                 SettingsGroupDivider()
                 SettingSwitch(
-                    title = "Сырые extras",
-                    description = "Технический payload уведомления в JSON",
+                    title = S["settings.raw_extras"],
+                    description = S["settings.raw_extras_desc"],
                     checked = settings.saveRawExtras,
                     onCheckedChange = { value -> onUpdate { it.copy(saveRawExtras = value) } },
                     icon = Icons.Rounded.Storage
                 )
                 SettingsGroupDivider()
                 SettingSwitch(
-                    title = "Склеивать повторы",
-                    description = "Одинаковые обновления не создают новые записи",
+                    title = S["settings.dedupe"],
+                    description = S["settings.dedupe_desc"],
                     checked = settings.dedupe,
                     onCheckedChange = { value -> onUpdate { it.copy(dedupe = value) } },
                     icon = Icons.Rounded.AutoAwesome
                 )
                 SettingsGroupDivider()
                 SettingSwitch(
-                    title = "Игнорировать постоянные",
-                    description = "Плееры, загрузки, сервисные уведомления",
+                    title = S["settings.ignore_ongoing"],
+                    description = S["settings.ignore_ongoing_desc"],
                     checked = settings.ignoreOngoing,
                     onCheckedChange = { value -> onUpdate { it.copy(ignoreOngoing = value) } },
                     icon = Icons.Rounded.CleaningServices
                 )
                 SettingsGroupDivider()
                 SettingSwitch(
-                    title = "Игнорировать тихие",
-                    description = "Уведомления низкого приоритета",
+                    title = S["settings.ignore_silent"],
+                    description = S["settings.ignore_silent_desc"],
                     checked = settings.ignoreSilent,
                     onCheckedChange = { value -> onUpdate { it.copy(ignoreSilent = value) } },
                     icon = Icons.Rounded.Bolt
@@ -291,16 +312,16 @@ fun SettingsScreen(
 
         item(key = "filters") {
             SettingsSection(
-                title = "Фильтры",
-                subtitle = "Какие приложения и слова пропускать",
+                title = S["settings.filters"],
+                subtitle = S["settings.filters_sub"],
                 accent = scheme.tertiary
             ) {
                 SettingAction(
-                    title = if (settings.includedOnly) "Только выбранные приложения" else "Исключённые приложения",
+                    title = if (settings.includedOnly) S["settings.only_selected"] else S["settings.excluded"],
                     description = if (settings.excludedApps.isEmpty()) {
-                        "Список пуст"
+                        S["settings.list_empty"]
                     } else {
-                        "Выбрано: ${settings.excludedApps.size}"
+                        S.f("settings.selected_count", settings.excludedApps.size)
                     },
                     icon = Icons.Rounded.Apps,
                     onClick = onOpenAppPicker,
@@ -308,8 +329,8 @@ fun SettingsScreen(
                 )
                 SettingsGroupDivider()
                 SettingSwitch(
-                    title = "Режим белого списка",
-                    description = "Сохранять только выбранные приложения",
+                    title = S["settings.whitelist"],
+                    description = S["settings.whitelist_desc"],
                     checked = settings.includedOnly,
                     onCheckedChange = { value -> onUpdate { it.copy(includedOnly = value) } },
                     icon = Icons.Rounded.Security
@@ -319,8 +340,8 @@ fun SettingsScreen(
                     value = settings.excludedKeywords,
                     onValueChange = { value -> onUpdate { it.copy(excludedKeywords = value) } },
                     modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp),
-                    label = { Text("Стоп-слова через запятую") },
-                    placeholder = { Text("реклама, акция, спам") },
+                    label = { Text(S["settings.stop_words"]) },
+                    placeholder = { Text(S["settings.stop_hint"]) },
                     shape = MaterialTheme.shapes.medium,
                     minLines = 1,
                     maxLines = 3
@@ -329,16 +350,16 @@ fun SettingsScreen(
                     value = settings.requiredKeywords,
                     onValueChange = { value -> onUpdate { it.copy(requiredKeywords = value) } },
                     modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp),
-                    label = { Text("Обязательные слова") },
-                    placeholder = { Text("код, заказ, банк") },
+                    label = { Text(S["settings.required_words"]) },
+                    placeholder = { Text(S["settings.required_hint"]) },
                     shape = MaterialTheme.shapes.medium,
                     minLines = 1,
                     maxLines = 3
                 )
                 SettingsGroupDivider()
                 SettingSwitch(
-                    title = "Маскировать секреты",
-                    description = "OTP, телефоны, e-mail и номера карт",
+                    title = S["settings.mask"],
+                    description = S["settings.mask_desc"],
                     checked = settings.maskSecrets,
                     onCheckedChange = { value -> onUpdate { it.copy(maskSecrets = value) } },
                     icon = Icons.Rounded.Key
@@ -348,8 +369,8 @@ fun SettingsScreen(
 
         item(key = "storage") {
             SettingsSection(
-                title = "Хранилище",
-                subtitle = "Папка, срок жизни и размер архива",
+                title = S["settings.storage"],
+                subtitle = S["settings.storage_sub"],
                 accent = scheme.secondary
             ) {
                 OutlinedTextField(
@@ -358,10 +379,10 @@ fun SettingsScreen(
                         onUpdate { it.copy(folderName = value.replace("/", "_").take(48)) }
                     },
                     modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp),
-                    label = { Text("Папка в Downloads") },
+                    label = { Text(S["settings.folder"]) },
                     leadingIcon = { Icon(Icons.Rounded.Folder, contentDescription = null) },
                     supportingText = {
-                        Text("Downloads/${settings.folderName.ifBlank { "Chronika" }}")
+                        Text(S.f("settings.downloads_path", settings.folderName.ifBlank { "Chronika" }))
                     },
                     singleLine = true,
                     shape = MaterialTheme.shapes.medium
@@ -369,15 +390,15 @@ fun SettingsScreen(
                 Column(Modifier.padding(horizontal = 16.dp, vertical = 8.dp)) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Text(
-                            text = "Хранить записей",
+                            text = S["settings.retention"],
                             style = MaterialTheme.typography.titleSmall,
                             modifier = Modifier.weight(1f)
                         )
                         Text(
                             text = if (retentionDraft.toInt() == 0) {
-                                "бессрочно"
+                                S["settings.unlimited"]
                             } else {
-                                "${retentionDraft.toInt()} дн."
+                                S.f("settings.days", retentionDraft.toInt())
                             },
                             style = MaterialTheme.typography.labelMedium,
                             color = scheme.primary
@@ -406,8 +427,8 @@ fun SettingsScreen(
                         .onFocusChanged { state ->
                             if (!state.isFocused) commitMaxEntries()
                         },
-                    label = { Text("Максимум записей в базе") },
-                    supportingText = { Text("От 500 до 200000, старые записи удаляются первыми") },
+                    label = { Text(S["settings.max_entries"]) },
+                    supportingText = { Text(S["settings.max_entries_hint"]) },
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                     keyboardActions = KeyboardActions(
                         onDone = {
@@ -420,15 +441,15 @@ fun SettingsScreen(
                 )
                 SettingsGroupDivider()
                 SettingAction(
-                    title = "Экспортировать всё",
-                    description = "Один JSON и один TXT со всеми записями",
+                    title = S["settings.export_all"],
+                    description = S["settings.export_all_desc"],
                     icon = Icons.Rounded.Archive,
                     onClick = onExportAll
                 )
                 SettingsGroupDivider()
                 SettingAction(
-                    title = "Очистить журнал",
-                    description = "Удалить записи из базы; файлы в Downloads останутся",
+                    title = S["settings.clear_journal"],
+                    description = S["settings.clear_journal_desc"],
                     icon = Icons.Rounded.DeleteForever,
                     onClick = { showDelete = true },
                     tint = scheme.error
@@ -438,13 +459,13 @@ fun SettingsScreen(
 
         item(key = "appearance") {
             SettingsSection(
-                title = "Оформление",
-                subtitle = "Тема, цвет и плотность",
+                title = S["settings.appearance"],
+                subtitle = S["settings.appearance_sub"],
                 accent = scheme.primary
             ) {
                 Column(Modifier.padding(horizontal = 16.dp, vertical = 8.dp)) {
                     Text(
-                        text = "Тема",
+                        text = S["settings.theme"],
                         style = MaterialTheme.typography.titleSmall
                     )
                     Spacer(Modifier.height(8.dp))
@@ -452,7 +473,11 @@ fun SettingsScreen(
                         modifier = Modifier.horizontalScroll(rememberScrollState()),
                         horizontalArrangement = Arrangement.spacedBy(7.dp)
                     ) {
-                        listOf("system" to "Система", "light" to "Светлая", "dark" to "Тёмная")
+                        listOf(
+                            "system" to S["settings.theme_system"],
+                            "light" to S["settings.theme_light"],
+                            "dark" to S["settings.theme_dark"]
+                        )
                             .forEach { (value, label) ->
                                 FilterChip(
                                     selected = settings.themeMode == value,
@@ -464,52 +489,157 @@ fun SettingsScreen(
                 }
                 SettingsGroupDivider()
                 SettingSwitch(
-                    title = "Динамический цвет",
-                    description = "Палитра обоев на Android 12+",
+                    title = S["settings.dynamic"],
+                    description = S["settings.dynamic_desc"],
                     checked = settings.dynamicColor,
                     onCheckedChange = { value -> onUpdate { it.copy(dynamicColor = value) } },
                     icon = Icons.Rounded.ColorLens
                 )
                 SettingsGroupDivider()
                 SettingSwitch(
-                    title = "Компактная плотность",
-                    description = "Больше записей на экране",
+                    title = S["settings.compact"],
+                    description = S["settings.compact_desc"],
                     checked = settings.compact,
                     onCheckedChange = { value -> onUpdate { it.copy(compact = value) } },
                     icon = Icons.Rounded.Tune
                 )
                 SettingsGroupDivider()
                 SettingAction(
-                    title = "Проверить уведомление",
-                    description = "Отправить тестовое и найти его в журнале",
+                    title = S["settings.test"],
+                    description = S["settings.test_desc"],
                     icon = Icons.Rounded.NotificationsActive,
                     onClick = onTest
                 )
             }
         }
 
+        item(key = "language") {
+            SettingsSection(
+                title = S["settings.language"],
+                subtitle = S["settings.language_sub"],
+                accent = scheme.primary
+            ) {
+                Column(Modifier.padding(horizontal = 16.dp, vertical = 8.dp)) {
+                    Row(
+                        modifier = Modifier.horizontalScroll(rememberScrollState()),
+                        horizontalArrangement = Arrangement.spacedBy(7.dp)
+                    ) {
+                        AppLanguage.entries.forEach { language ->
+                            FilterChip(
+                                selected = currentLanguage == language,
+                                onClick = {
+                                    onUpdate { it.copy(language = language.code) }
+                                    S.setLanguage(language)
+                                    context.findActivity()?.recreate()
+                                },
+                                label = { Text(S[language.labelKey]) }
+                            )
+                        }
+                    }
+                    Spacer(Modifier.height(8.dp))
+                    Text(
+                        text = S["settings.language_note"],
+                        style = MaterialTheme.typography.bodySmall,
+                        color = scheme.onSurfaceVariant
+                    )
+                }
+            }
+        }
+
+        item(key = "display") {
+            SettingsSection(
+                title = S["settings.display"],
+                subtitle = S["settings.display_sub"],
+                accent = scheme.secondary
+            ) {
+                SettingSwitch(
+                    title = S["settings.adaptive"],
+                    description = S["settings.adaptive_desc"],
+                    checked = settings.adaptiveLayout,
+                    onCheckedChange = { value -> onUpdate { it.copy(adaptiveLayout = value) } },
+                    icon = Icons.Rounded.Tune
+                )
+                SettingsGroupDivider()
+                Column(Modifier.padding(horizontal = 16.dp, vertical = 8.dp)) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Text(
+                            text = S["settings.scale"],
+                            style = MaterialTheme.typography.titleSmall,
+                            modifier = Modifier.weight(1f)
+                        )
+                        Text(
+                            text = S.f("settings.scale_value", (scaleDraft * 100).roundToInt()),
+                            style = MaterialTheme.typography.labelMedium,
+                            color = scheme.primary
+                        )
+                    }
+                    Slider(
+                        value = scaleDraft,
+                        onValueChange = { value -> scaleDraft = value },
+                        onValueChangeFinished = {
+                            if (scaleDraft != settings.uiScale) {
+                                onUpdate { it.copy(uiScale = scaleDraft) }
+                            }
+                        },
+                        valueRange = 0.85f..1.15f,
+                        enabled = settings.adaptiveLayout
+                    )
+                    Text(
+                        text = S.f(
+                            "settings.device_info",
+                            device.widthDp,
+                            device.heightDp,
+                            device.scale,
+                            device.density
+                        ),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = scheme.onSurfaceVariant
+                    )
+                    Text(
+                        text = S.f(
+                            "settings.device_class",
+                            S[
+                                when (device.screenClass) {
+                                    ScreenClass.COMPACT -> "settings.class_compact"
+                                    ScreenClass.MEDIUM -> "settings.class_medium"
+                                    ScreenClass.EXPANDED -> "settings.class_expanded"
+                                }
+                            ]
+                        ),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = scheme.onSurfaceVariant
+                    )
+                    Spacer(Modifier.height(6.dp))
+                    Text(
+                        text = S["settings.adaptive_note"],
+                        style = MaterialTheme.typography.bodySmall,
+                        color = scheme.onSurfaceVariant
+                    )
+                }
+            }
+        }
+
         item(key = "about") {
             SettingsSection(
-                title = "О Хронике",
-                subtitle = "Локальный архив без облака",
+                title = S["settings.about"],
+                subtitle = S["settings.about_sub"],
                 accent = scheme.outline
             ) {
                 SettingValueRow(
-                    title = "Версия",
+                    title = S["settings.version"],
                     value = BuildConfig.VERSION_NAME,
                     icon = Icons.Rounded.AutoAwesome
                 )
                 SettingsGroupDivider()
                 SettingAction(
-                    title = "Политика и исходники",
-                    description = "Приватный репозиторий проекта",
+                    title = S["settings.policy"],
+                    description = S["settings.policy_desc"],
                     icon = Icons.Rounded.Security,
                     onClick = { onOpenUrl("https://github.com/HmnDev-Tech/chronika") }
                 )
                 SettingsGroupDivider()
                 Text(
-                    text = "Хроника не отправляет данные в сеть. Всё лежит в локальной базе " +
-                        "и в Downloads/${settings.folderName.ifBlank { "Chronika" }}.",
+                    text = S.f("settings.privacy_note", settings.folderName.ifBlank { "Chronika" }),
                     style = MaterialTheme.typography.bodySmall,
                     color = scheme.onSurfaceVariant,
                     modifier = Modifier.padding(16.dp)
@@ -521,12 +651,9 @@ fun SettingsScreen(
     if (showDelete) {
         AlertDialog(
             onDismissRequest = { showDelete = false },
-            title = { Text("Очистить журнал?") },
+            title = { Text(S["settings.clear_title"]) },
             text = {
-                Text(
-                    "Будут удалены все записи из базы. Файлы в Downloads останутся " +
-                        "нетронутыми — их можно удалить вручную."
-                )
+                Text(S["settings.clear_body"])
             },
             confirmButton = {
                 TextButton(
@@ -534,10 +661,10 @@ fun SettingsScreen(
                         showDelete = false
                         onDeleteAll()
                     }
-                ) { Text("Очистить", color = scheme.error) }
+                ) { Text(S["settings.clear_confirm"], color = scheme.error) }
             },
             dismissButton = {
-                TextButton(onClick = { showDelete = false }) { Text("Отмена") }
+                TextButton(onClick = { showDelete = false }) { Text(S["common.cancel"]) }
             }
         )
     }
@@ -576,7 +703,16 @@ private fun AccessRow(
             )
         }
         TextButton(onClick = onClick) {
-            Text(if (granted) "ЕСТЬ" else "ВЫДАТЬ")
+            Text(if (granted) S["common.have"] else S["common.grant"])
         }
     }
+}
+
+private fun Context.findActivity(): Activity? {
+    var current = this
+    while (current is ContextWrapper) {
+        if (current is Activity) return current
+        current = current.baseContext
+    }
+    return null
 }

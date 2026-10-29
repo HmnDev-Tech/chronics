@@ -14,11 +14,12 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.unit.dp
+import com.hmndev.chronika.i18n.S
 
-enum class JournalFilter(val label: String, val icon: ImageVector) {
-    ALL("Все", Icons.Rounded.Inbox),
-    IMPORTANT("Важные", Icons.Rounded.Bolt),
-    PINNED("Избранное", Icons.Rounded.PushPin)
+enum class JournalFilter(val labelKey: String, val icon: ImageVector) {
+    ALL("filter.all", Icons.Rounded.Inbox),
+    IMPORTANT("filter.important", Icons.Rounded.Bolt),
+    PINNED("filter.pinned", Icons.Rounded.PushPin)
 }
 
 @Composable
@@ -31,7 +32,7 @@ fun FilterLens(
         overflowIndicator = { _ ->
             Icon(
                 imageVector = Icons.Rounded.MoreHoriz,
-                contentDescription = "Ещё фильтры",
+                contentDescription = S["filter.more"],
                 modifier = Modifier.size(20.dp)
             )
         },
@@ -41,7 +42,7 @@ fun FilterLens(
         JournalFilter.entries.forEach { filter ->
             toggleableItem(
                 checked = selected == filter,
-                label = filter.label,
+                label = S[filter.labelKey],
                 onCheckedChange = { onSelected(filter) },
                 icon = {
                     Icon(

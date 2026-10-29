@@ -9,14 +9,18 @@ import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -27,11 +31,11 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.unit.dp
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.compose.LocalLifecycleOwner
+import com.hmndev.chronika.i18n.S
 import com.hmndev.chronika.shizuku.ShizukuManager
 import com.hmndev.chronika.ui.components.DockDestination
 import com.hmndev.chronika.ui.components.FloatingDock
@@ -57,6 +61,7 @@ fun ChronikaRoot(viewModel: JournalViewModel) {
     val topApps by viewModel.topApps.collectAsStateWithLifecycle()
     val daily by viewModel.daily.collectAsStateWithLifecycle()
     val shizuku by ShizukuManager.state.collectAsStateWithLifecycle()
+    val device = rememberDeviceProfile()
 
     var destination by rememberSaveable { mutableStateOf(DockDestination.JOURNAL.name) }
     var detailId by rememberSaveable { mutableStateOf(-1L) }
@@ -91,8 +96,9 @@ fun ChronikaRoot(viewModel: JournalViewModel) {
         ?: DockDestination.JOURNAL
     val detail = entries.firstOrNull { it.id == detailId }
 
-    when {
-        showPicker -> {
+    CompositionLocalProvider(LocalDeviceProfile provides device) {
+        when {
+            showPicker -> {
             AppPickerScreen(
                 selected = settings.excludedApps,
                 includedOnly = settings.includedOnly,
@@ -121,21 +127,21 @@ fun ChronikaRoot(viewModel: JournalViewModel) {
                 onArchive = {
                     viewModel.archive(detail, !detail.isArchived)
                     detailId = -1L
-                    notify(if (detail.isArchived) "Возвращено в журнал" else "Убрано в архив")
+                    notify(if (detail.isArchived) S["toast.restored"] else S["toast.archived"])
                 },
                 onDelete = {
                     viewModel.delete(detail)
                     detailId = -1L
-                    notify("Запись удалена. Файлы в Downloads остались")
+                    notify(S["toast.deleted"])
                 },
                 onExport = {
                     scope.launch {
                         val result = viewModel.export(detail)
                         notify(
                             if (result.ok) {
-                                "Сохранено в Downloads/${settings.folderName.ifBlank { "Chronika" }}"
+                                S.f("toast.saved", settings.folderName.ifBlank { "Chronika" })
                             } else {
-                                "Не удалось сохранить: ${result.error}"
+                                S.f("toast.save_failed", result.error)
                             }
                         )
                     }
@@ -172,9 +178,9 @@ fun ChronikaRoot(viewModel: JournalViewModel) {
                 },
                 onTest = {
                     if (viewModel.testNotification()) {
-                        notify("Тестовое уведомление отправлено. Оно появится в журнале.")
+                        notify(S["toast.test_sent"])
                     } else {
-                        notify("Не удалось отправить тестовое уведомление")
+                        notify(S["toast.test_failed"])
                     }
                 },
                 onFinish = {
@@ -192,10 +198,20 @@ fun ChronikaRoot(viewModel: JournalViewModel) {
                 Box(
                     Modifier
                         .fillMaxSize()
-                        .padding(padding)
+                        .padding(padding),
+                    contentAlignment = Alignment.TopCenter
                 ) {
                     AnimatedContent(
                         targetState = currentDestination,
+                        modifier = Modifier
+                            .fillMaxHeight()
+                            .then(
+                                if (device.screenClass == ScreenClass.EXPANDED) {
+                                    Modifier.widthIn(max = device.contentMaxWidth).fillMaxWidth()
+                                } else {
+                                    Modifier.fillMaxWidth()
+                                }
+                            ),
                         transitionSpec = { fadeIn() togetherWith fadeOut() },
                         label = "screens"
                     ) { target ->
@@ -213,9 +229,9 @@ fun ChronikaRoot(viewModel: JournalViewModel) {
                                 onOpenSettings = { destination = DockDestination.SETTINGS.name },
                                 onTest = {
                                     if (viewModel.testNotification()) {
-                                        notify("Тестовое уведомление отправлено")
+                                        notify(S["toast.test_sent_short"])
                                     } else {
-                                        notify("Не удалось отправить уведомление")
+                                        notify(S["toast.test_failed_short"])
                                     }
                                 },
                                 onOpenInsights = { destination = DockDestination.INSIGHTS.name }
@@ -263,9 +279,9 @@ fun ChronikaRoot(viewModel: JournalViewModel) {
                                 },
                                 onTest = {
                                     if (viewModel.testNotification()) {
-                                        notify("Тестовое уведомление отправлено")
+                                        notify(S["toast.test_sent_short"])
                                     } else {
-                                        notify("Не удалось отправить уведомление")
+                                        notify(S["toast.test_failed_short"])
                                     }
                                 },
                                 onExportAll = {
@@ -274,16 +290,16 @@ fun ChronikaRoot(viewModel: JournalViewModel) {
                                         val folder = settings.folderName.ifBlank { "Chronika" }
                                         notify(
                                             if (result.ok) {
-                                                "Архив сохранён в Downloads/$folder/backup"
+                                                S.f("toast.backup_saved", folder)
                                             } else {
-                                                "Ошибка экспорта: ${result.error}"
+                                                S.f("toast.export_failed", result.error)
                                             }
                                         )
                                     }
                                 },
                                 onDeleteAll = {
                                     viewModel.deleteAll()
-                                    notify("Журнал очищен. Файлы в Downloads остались")
+                                    notify(S["toast.cleared"])
                                 },
                                 onOpenUrl = { url -> PermissionTools.openUrl(context, url) }
                             )
@@ -296,10 +312,11 @@ fun ChronikaRoot(viewModel: JournalViewModel) {
                         modifier = Modifier
                             .align(Alignment.BottomCenter)
                             .navigationBarsPadding()
-                            .padding(bottom = 14.dp)
+                            .padding(bottom = device.dockBottomPadding)
                     )
                 }
             }
         }
+    }
     }
 }

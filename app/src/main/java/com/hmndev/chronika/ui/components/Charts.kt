@@ -28,6 +28,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.hmndev.chronika.data.AppCount
+import com.hmndev.chronika.i18n.S
 import com.hmndev.chronika.data.DayCount
 import com.hmndev.chronika.ui.theme.Coral
 import com.hmndev.chronika.ui.theme.Lime
@@ -184,7 +185,7 @@ fun StorageWave(
         Column(Modifier.padding(16.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Text(
-                    text = "ЗАПОЛНЕНИЕ АРХИВА",
+                    text = S["charts.storage"],
                     style = MaterialTheme.typography.labelSmall,
                     color = scheme.onSurfaceVariant,
                     modifier = Modifier.weight(1f)
@@ -206,7 +207,7 @@ fun StorageWave(
             }
             Spacer(Modifier.height(8.dp))
             Text(
-                text = "$used из $max записей · файлы лежат в Downloads",
+                text = S.f("charts.storage_line", used, max),
                 style = MaterialTheme.typography.bodySmall,
                 color = scheme.onSurfaceVariant
             )

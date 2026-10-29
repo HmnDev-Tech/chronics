@@ -14,6 +14,7 @@ import com.hmndev.chronika.data.AppSettings
 import com.hmndev.chronika.data.JournalEntry
 import com.hmndev.chronika.data.JournalRepository
 import com.hmndev.chronika.data.SettingsStore
+import com.hmndev.chronika.i18n.S
 import com.hmndev.chronika.util.CaptureImageCache
 import com.hmndev.chronika.util.ExportManager
 import com.hmndev.chronika.util.Fingerprint
@@ -91,7 +92,7 @@ object CaptureEngine {
                 subText = "",
                 category = "accessibility",
                 channelId = "accessibility",
-                channelName = "Событие доступности",
+                channelName = S["capture.accessibility_channel"],
                 groupKey = "",
                 conversationTitle = "",
                 messagesJson = "[]",
@@ -143,7 +144,7 @@ object CaptureEngine {
                 subText = "",
                 category = "shizuku",
                 channelId = "shizuku",
-                channelName = "Импорт Shizuku",
+                channelName = S["capture.shizuku_channel"],
                 groupKey = "",
                 conversationTitle = "",
                 messagesJson = "[]",
@@ -175,10 +176,10 @@ object CaptureEngine {
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
                 val channel = NotificationChannel(
                     "chronika_test",
-                    "Проверка Хроники",
+                    S["capture.test_channel"],
                     NotificationManager.IMPORTANCE_DEFAULT
                 ).apply {
-                    description = "Тестовые уведомления журнала"
+                    description = S["capture.test_channel_desc"]
                 }
                 manager.createNotificationChannel(channel)
             }
@@ -191,12 +192,11 @@ object CaptureEngine {
             )
             val notification = Notification.Builder(context, "chronika_test")
                 .setSmallIcon(R.drawable.ic_stat_chronika)
-                .setContentTitle("Хроника · проверка")
-                .setContentText("Это тестовое уведомление. Оно должно появиться в журнале.")
+                .setContentTitle(S["capture.test_title"])
+                .setContentText(S["capture.test_text"])
                 .setStyle(
                     Notification.BigTextStyle().bigText(
-                        "Это тестовое уведомление. Оно должно появиться в журнале, " +
-                            "даже если исчезнет из панели уведомлений."
+                        S["capture.test_big"]
                     )
                 )
                 .setContentIntent(pending)

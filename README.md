@@ -26,8 +26,14 @@ The app sends nothing to the network and requires no account.
 - **Journal** — day-by-day timeline, search, pinning, archive, an entry screen
   with messages, attachments, raw extras, and text copying.
 - **Pulse** — statistics by hour and day, top apps, sources, archive fill.
-- **Settings** — theme, dynamic color, retention period, entry limit, folder,
-  auto-export, masking.
+- **Languages** — the whole interface is translated into English, Russian,
+  Kazakh, Spanish, Chinese, and Portuguese. The language can be changed in
+  Settings and is applied immediately.
+- **Adaptive sizing** — paddings, cards, the hero panel, and the floating dock
+  are scaled from the real screen size and density of the phone, with a
+  fine-tuning slider in Settings. Wide screens get centered content.
+- **Settings** — language, adaptive sizing, theme, dynamic color, retention
+  period, entry limit, folder, auto-export, masking.
 
 ## Build
 
@@ -57,10 +63,11 @@ Stack: Kotlin 2.2.20, AGP 9.1.1, Gradle 9.3.1, Compose Material 3 1.5.0-beta02
 ```
 app/src/main/java/com/hmndev/chronika/
   data/       SQLite, repository, settings, models
+  i18n/       string catalogs for six languages and the runtime resolver
   service/    notification listener, accessibility, capture engine
   shizuku/    permissions, shell, dumpsys import
   util/       notification parser, export, time, masking
-  ui/         Compose screens, components, theme
+  ui/         Compose screens, components, theme, adaptive sizing
 ```
 
 ## Privacy

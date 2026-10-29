@@ -37,6 +37,8 @@ import com.hmndev.chronika.data.AppSettings
 import com.hmndev.chronika.data.DayCount
 import com.hmndev.chronika.data.JournalEntry
 import com.hmndev.chronika.data.JournalStats
+import com.hmndev.chronika.i18n.S
+import com.hmndev.chronika.ui.LocalDeviceProfile
 import com.hmndev.chronika.ui.components.DayBars
 import com.hmndev.chronika.ui.components.HourlyChart
 import com.hmndev.chronika.ui.components.MetaPill
@@ -55,15 +57,21 @@ fun InsightsScreen(
     settings: AppSettings
 ) {
     val scheme = MaterialTheme.colorScheme
+    val device = LocalDeviceProfile.current
     val sources = entries.groupingBy { it.source }.eachCount()
     LazyColumn(
-        contentPadding = PaddingValues(start = 18.dp, end = 18.dp, top = 14.dp, bottom = 126.dp),
-        verticalArrangement = Arrangement.spacedBy(14.dp)
+        contentPadding = PaddingValues(
+            start = device.screenPadding,
+            end = device.screenPadding,
+            top = device.dp(14.dp),
+            bottom = device.dp(126.dp)
+        ),
+        verticalArrangement = Arrangement.spacedBy(device.dp(14.dp))
     ) {
         item(key = "heading") {
             SectionHeading(
-                eyebrow = "ПУЛЬС",
-                title = "Архив в цифрах"
+                eyebrow = S["insights.eyebrow"],
+                title = S["insights.title"]
             )
         }
 
@@ -74,7 +82,7 @@ fun InsightsScreen(
             ) {
                 InsightStat(
                     value = stats.total.toString(),
-                    label = "записей",
+                    label = S["insights.entries"],
                     icon = Icons.Rounded.Layers,
                     container = scheme.primaryContainer,
                     content = scheme.onPrimaryContainer,
@@ -86,7 +94,7 @@ fun InsightsScreen(
                 ) {
                     InsightStat(
                         value = stats.unread.toString(),
-                        label = "новых",
+                        label = S["insights.unread"],
                         icon = Icons.Rounded.Bolt,
                         container = scheme.tertiaryContainer,
                         content = scheme.onTertiaryContainer,
@@ -94,7 +102,7 @@ fun InsightsScreen(
                     )
                     InsightStat(
                         value = stats.apps.toString(),
-                        label = "приложений",
+                        label = S["insights.apps"],
                         icon = Icons.Rounded.AutoAwesome,
                         container = scheme.secondaryContainer,
                         content = scheme.onSecondaryContainer,
@@ -120,7 +128,7 @@ fun InsightsScreen(
                         )
                         Spacer(Modifier.width(7.dp))
                         Text(
-                            text = "СЕГОДНЯ ПО ЧАСАМ",
+                            text = S["insights.hourly"],
                             style = MaterialTheme.typography.labelSmall,
                             color = scheme.onSurfaceVariant
                         )
@@ -139,7 +147,7 @@ fun InsightsScreen(
             ) {
                 Column(Modifier.padding(16.dp)) {
                     Text(
-                        text = "ПОСЛЕДНИЕ 7 ДНЕЙ",
+                        text = S["insights.week"],
                         style = MaterialTheme.typography.labelSmall,
                         color = scheme.onSurfaceVariant
                     )
@@ -152,17 +160,17 @@ fun InsightsScreen(
         item(key = "sources") {
             Row(horizontalArrangement = Arrangement.spacedBy(7.dp)) {
                 MetaPill(
-                    text = "уведомления · ${sources["listener"] ?: 0}",
+                    text = S.f("insights.source_listener", sources["listener"] ?: 0),
                     container = scheme.primaryContainer,
                     content = scheme.onPrimaryContainer
                 )
                 MetaPill(
-                    text = "доступность · ${sources["accessibility"] ?: 0}",
+                    text = S.f("insights.source_accessibility", sources["accessibility"] ?: 0),
                     container = scheme.tertiaryContainer,
                     content = scheme.onTertiaryContainer
                 )
                 MetaPill(
-                    text = "shizuku · ${sources["shizuku"] ?: 0}",
+                    text = S.f("insights.source_shizuku", sources["shizuku"] ?: 0),
                     container = scheme.secondaryContainer,
                     content = scheme.onSecondaryContainer
                 )
@@ -176,8 +184,8 @@ fun InsightsScreen(
         if (topApps.isNotEmpty()) {
             item(key = "appsHeading") {
                 SectionHeading(
-                    eyebrow = "КУДА СМОТРЕТЬ",
-                    title = "Самые громкие"
+                    eyebrow = S["insights.top_eyebrow"],
+                    title = S["insights.top_title"]
                 )
             }
             item(key = "apps") {
@@ -197,8 +205,7 @@ fun InsightsScreen(
 
         item(key = "footnote") {
             Text(
-                text = "Данные считаются по локальной базе. Файлы уведомлений лежат в " +
-                    "Downloads/${settings.folderName.ifBlank { "Chronika" }}.",
+                text = S.f("insights.footnote", settings.folderName.ifBlank { "Chronika" }),
                 style = MaterialTheme.typography.bodySmall,
                 color = scheme.onSurfaceVariant
             )

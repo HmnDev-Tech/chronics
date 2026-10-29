@@ -1,9 +1,12 @@
 package com.hmndev.chronika
 
+import com.hmndev.chronika.i18n.AppLanguage
+import com.hmndev.chronika.i18n.S
 import com.hmndev.chronika.util.TimeTools
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
+import org.junit.Before
 import org.junit.Test
 import java.time.Instant
 import java.time.LocalDate
@@ -12,6 +15,11 @@ import java.time.ZoneId
 class TimeToolsTest {
 
     private val zone: ZoneId = ZoneId.systemDefault()
+
+    @Before
+    fun setUp() {
+        S.setLanguage(AppLanguage.EN)
+    }
 
     @Test
     fun dayKeyMatchesLocalDate() {
@@ -33,7 +41,7 @@ class TimeToolsTest {
     @Test
     fun todayLabelIsRecognised() {
         val now = System.currentTimeMillis()
-        assertEquals("Сегодня", TimeTools.dayLabel(now))
+        assertEquals("Today", TimeTools.dayLabel(now))
         assertTrue(TimeTools.isToday(now))
         assertFalse(TimeTools.isToday(now - 3L * 86_400_000L))
     }
@@ -49,6 +57,6 @@ class TimeToolsTest {
 
     @Test
     fun relativeForFreshTimestamp() {
-        assertEquals("только что", TimeTools.relative(System.currentTimeMillis()))
+        assertEquals("just now", TimeTools.relative(System.currentTimeMillis()))
     }
 }

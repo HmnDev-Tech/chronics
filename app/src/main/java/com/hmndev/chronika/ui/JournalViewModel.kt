@@ -11,6 +11,7 @@ import com.hmndev.chronika.data.JournalRepository
 import com.hmndev.chronika.data.JournalStats
 import com.hmndev.chronika.data.JournalStore
 import com.hmndev.chronika.data.SettingsStore
+import com.hmndev.chronika.i18n.S
 import com.hmndev.chronika.service.CaptureEngine
 import com.hmndev.chronika.shizuku.ImportResult
 import com.hmndev.chronika.shizuku.ShizukuManager
@@ -120,12 +121,12 @@ class JournalViewModel(application: Application) : AndroidViewModel(application)
 
     suspend fun grantListener(): String {
         val result = ShizukuManager.grantNotificationListener(getApplication())
-        return result.message.ifBlank { if (result.ok) "Готово" else "Не удалось" }
+        return result.message.ifBlank { if (result.ok) S["common.done"] else S["common.failed"] }
     }
 
     suspend fun grantAccessibility(): String {
         val result = ShizukuManager.grantAccessibility(getApplication())
-        return result.message.ifBlank { if (result.ok) "Готово" else "Не удалось" }
+        return result.message.ifBlank { if (result.ok) S["common.done"] else S["common.failed"] }
     }
 
     private data class Bundle(

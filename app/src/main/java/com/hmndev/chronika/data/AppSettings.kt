@@ -26,7 +26,10 @@ data class AppSettings(
     val themeMode: String = "system",
     val dynamicColor: Boolean = true,
     val compact: Boolean = false,
-    val showRawPayload: Boolean = false
+    val showRawPayload: Boolean = false,
+    val language: String = "",
+    val adaptiveLayout: Boolean = true,
+    val uiScale: Float = 1f
 ) {
     fun appAllowed(packageName: String): Boolean {
         if (includedOnly) return excludedApps.contains(packageName)

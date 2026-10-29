@@ -29,12 +29,13 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.unit.dp
+import com.hmndev.chronika.i18n.S
 import com.hmndev.chronika.ui.theme.Lime
 
-enum class DockDestination(val label: String, val icon: ImageVector) {
-    JOURNAL("Журнал", Icons.Rounded.Timeline),
-    INSIGHTS("Пульс", Icons.Rounded.QueryStats),
-    SETTINGS("Настройки", Icons.Rounded.Tune)
+enum class DockDestination(val labelKey: String, val icon: ImageVector) {
+    JOURNAL("dock.journal", Icons.Rounded.Timeline),
+    INSIGHTS("dock.insights", Icons.Rounded.QueryStats),
+    SETTINGS("dock.settings", Icons.Rounded.Tune)
 }
 
 @Composable
@@ -95,7 +96,7 @@ private fun DockItem(
     ) {
         Icon(
             imageVector = destination.icon,
-            contentDescription = destination.label,
+            contentDescription = S[destination.labelKey],
             modifier = Modifier.size(20.dp),
             tint = if (selected) scheme.onPrimary else scheme.onSurfaceVariant
         )
@@ -105,7 +106,7 @@ private fun DockItem(
             exit = fadeOut()
         ) {
             Text(
-                text = destination.label,
+                text = S[destination.labelKey],
                 style = MaterialTheme.typography.labelLarge,
                 color = scheme.onPrimary
             )

@@ -1,6 +1,7 @@
 package com.hmndev.chronika.util
 
 import com.hmndev.chronika.data.JournalEntry
+import com.hmndev.chronika.i18n.S
 import org.json.JSONArray
 
 data class MessageView(
@@ -47,18 +48,18 @@ object EntryFormat {
     }
 
     fun sourceLabel(source: String): String = when (source) {
-        "listener" -> "Уведомление"
-        "accessibility" -> "Доступность"
-        "shizuku" -> "Shizuku"
+        "listener" -> S["source.listener"]
+        "accessibility" -> S["source.accessibility"]
+        "shizuku" -> S["source.shizuku"]
         else -> source
     }
 
     fun importanceLabel(priority: Int): String = when {
-        priority >= 2 -> "высокий"
-        priority == 1 -> "повышенный"
-        priority == 0 -> "обычный"
-        priority == -1 -> "низкий"
-        else -> "тихий"
+        priority >= 2 -> S["priority.high"]
+        priority == 1 -> S["priority.above"]
+        priority == 0 -> S["priority.normal"]
+        priority == -1 -> S["priority.low"]
+        else -> S["priority.silent"]
     }
 
     fun searchText(entry: JournalEntry): String =

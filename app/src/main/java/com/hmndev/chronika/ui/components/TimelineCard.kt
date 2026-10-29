@@ -34,6 +34,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.hmndev.chronika.data.JournalEntry
 import com.hmndev.chronika.ui.theme.Lime
+import com.hmndev.chronika.i18n.S
 import com.hmndev.chronika.util.EntryFormat
 import com.hmndev.chronika.util.TextTools
 import com.hmndev.chronika.util.TimeTools
@@ -150,7 +151,7 @@ fun TimelineEntry(
                         ) {
                             Icon(
                                 imageVector = Icons.Rounded.PushPin,
-                                contentDescription = if (entry.isPinned) "Открепить" else "Закрепить",
+                                contentDescription = if (entry.isPinned) S["common.unpin"] else S["common.pin"],
                                 modifier = Modifier.size(16.dp),
                                 tint = if (entry.isPinned) scheme.primary else scheme.outline
                             )
@@ -206,14 +207,14 @@ fun TimelineEntry(
                             content = scheme.onSurfaceVariant
                         )
                         if (entry.isOngoing) {
-                            MetaPill(text = "постоянное", container = scheme.tertiaryContainer, content = scheme.onTertiaryContainer)
+                            MetaPill(text = S["timeline.ongoing"], container = scheme.tertiaryContainer, content = scheme.onTertiaryContainer)
                         }
                         if (entry.isSilent) {
-                            MetaPill(text = "тихое", container = scheme.surfaceContainerHighest, content = scheme.onSurfaceVariant)
+                            MetaPill(text = S["timeline.silent"], container = scheme.surfaceContainerHighest, content = scheme.onSurfaceVariant)
                         }
                         if (entry.exportPath.isNotBlank()) {
                             MetaPill(
-                                text = "в Downloads",
+                                text = S["timeline.downloads"],
                                 icon = Icons.Rounded.DownloadDone,
                                 container = scheme.primaryContainer,
                                 content = scheme.onPrimaryContainer

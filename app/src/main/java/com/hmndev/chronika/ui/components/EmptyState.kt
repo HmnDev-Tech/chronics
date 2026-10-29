@@ -33,6 +33,7 @@ import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import com.hmndev.chronika.ui.theme.Coral
+import com.hmndev.chronika.i18n.S
 import com.hmndev.chronika.ui.theme.Lime
 
 @Composable
@@ -98,15 +99,13 @@ fun EmptyJournal(
                 }
                 Spacer(Modifier.height(18.dp))
                 Text(
-                    text = "Журнал ещё пуст",
+                    text = S["empty.title"],
                     style = MaterialTheme.typography.headlineMedium,
                     color = scheme.onSurface
                 )
                 Spacer(Modifier.height(5.dp))
                 Text(
-                    text = "Разрешите доступ к уведомлениям — Хроника начнёт собирать " +
-                        "полные тексты в Downloads. Даже если сообщение исчезнет из чата, " +
-                        "оно останется здесь.",
+                    text = S["empty.body"],
                     style = MaterialTheme.typography.bodyMedium,
                     color = scheme.onSurfaceVariant
                 )
@@ -119,10 +118,10 @@ fun EmptyJournal(
                             modifier = Modifier.size(17.dp)
                         )
                         Spacer(Modifier.size(7.dp))
-                        Text("Проверить")
+                        Text(S["empty.test"])
                     }
                     OutlinedButton(onClick = onOpenSettings, shape = CircleShape) {
-                        Text("Настроить")
+                        Text(S["empty.setup"])
                     }
                 }
                 Spacer(Modifier.height(6.dp))

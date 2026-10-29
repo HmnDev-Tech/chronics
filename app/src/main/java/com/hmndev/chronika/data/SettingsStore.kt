@@ -55,6 +55,9 @@ object SettingsStore {
             putBoolean("dynamicColor", next.dynamicColor)
             putBoolean("compact", next.compact)
             putBoolean("showRawPayload", next.showRawPayload)
+            putString("language", next.language)
+            putBoolean("adaptiveLayout", next.adaptiveLayout)
+            putFloat("uiScale", next.uiScale)
             apply()
         }
         _settings.value = next
@@ -88,7 +91,10 @@ object SettingsStore {
             themeMode = prefs.getString("themeMode", defaults.themeMode).orEmpty().ifBlank { defaults.themeMode },
             dynamicColor = prefs.getBoolean("dynamicColor", defaults.dynamicColor),
             compact = prefs.getBoolean("compact", defaults.compact),
-            showRawPayload = prefs.getBoolean("showRawPayload", defaults.showRawPayload)
+            showRawPayload = prefs.getBoolean("showRawPayload", defaults.showRawPayload),
+            language = prefs.getString("language", defaults.language).orEmpty(),
+            adaptiveLayout = prefs.getBoolean("adaptiveLayout", defaults.adaptiveLayout),
+            uiScale = prefs.getFloat("uiScale", defaults.uiScale).coerceIn(0.85f, 1.15f)
         )
     }
 }

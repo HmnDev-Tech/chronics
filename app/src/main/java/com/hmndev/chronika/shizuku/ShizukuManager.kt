@@ -3,6 +3,7 @@ package com.hmndev.chronika.shizuku
 import android.content.ComponentName
 import android.content.Context
 import android.content.pm.PackageManager
+import com.hmndev.chronika.i18n.S
 import com.hmndev.chronika.service.CaptureEngine
 import com.hmndev.chronika.service.JournalAccessibilityService
 import com.hmndev.chronika.service.JournalNotificationListener
@@ -21,7 +22,7 @@ data class ShizukuState(
     val available: Boolean = false,
     val permissionGranted: Boolean = false,
     val version: Int = 0,
-    val message: String = "Shizuku не запущен"
+    val message: String = S["shizuku.not_running"]
 )
 
 data class ShellResult(
@@ -83,9 +84,9 @@ object ShizukuManager {
             }.getOrDefault(false)
         }
         val message = when {
-            !available -> "Shizuku не запущен или сервис не отвечает"
-            !permission -> "Shizuku найден, нужно выдать разрешение"
-            else -> "Shizuku активен · API $version"
+            !available -> S["shizuku.unavailable"]
+            !permission -> S["shizuku.permission_needed"]
+            else -> S.f("shizuku.active", version)
         }
         _state.value = ShizukuState(available, permission, version, message)
     }
@@ -93,22 +94,22 @@ object ShizukuManager {
     fun requestPermission() {
         val current = _state.value
         if (!current.available) {
-            _state.value = current.copy(message = "Сначала запустите Shizuku")
+            _state.value = current.copy(message = S["shizuku.start_first"])
             return
         }
         runCatching {
             Shizuku.requestPermission(REQUEST_CODE)
         }.onFailure {
-            _state.value = current.copy(message = "Не удалось запросить доступ: ${it.message}")
+            _state.value = current.copy(message = S.f("shizuku.request_failed", it.message))
         }
     }
 
     suspend fun runCommand(command: String): ShellResult = withContext(Dispatchers.IO) {
         if (!_state.value.available) {
-            return@withContext ShellResult(false, message = "Shizuku не запущен")
+            return@withContext ShellResult(false, message = S["shizuku.not_running"])
         }
         if (!_state.value.permissionGranted) {
-            return@withContext ShellResult(false, message = "Нет разрешения Shizuku")
+            return@withContext ShellResult(false, message = S["shizuku.no_permission"])
         }
         try {
             val method = Shizuku::class.java.getDeclaredMethod(
@@ -138,7 +139,7 @@ object ShizukuManager {
                 ok = code == 0,
                 stdout = stdout,
                 stderr = stderr,
-                message = if (code == 0) "" else "Код $code: ${stderr.take(240)}"
+                message = if (code == 0) "" else S.f("shizuku.code", code, stderr.take(240))
             )
         } catch (t: Throwable) {
             ShellResult(false, message = t.message ?: t.javaClass.simpleName)
@@ -150,13 +151,13 @@ object ShizukuManager {
             .flattenToString()
         val direct = runCommand("cmd notification allow_listener $component")
         if (direct.ok) {
-            return direct.copy(message = "Доступ к уведомлениям выдан через Shizuku")
+            return direct.copy(message = S["shizuku.listener_granted"])
         }
         val existing = runCommand("settings get secure enabled_notification_listeners")
         if (!existing.ok) return direct
         val current = existing.stdout.trim().removePrefix("[").removeSuffix("]")
         if (current.contains(component)) {
-            return ShellResult(true, message = "Доступ уже выдан")
+            return ShellResult(true, message = S["shizuku.already_granted"])
         }
         val next = when {
             current.isBlank() || current == "null" -> component
@@ -164,7 +165,7 @@ object ShizukuManager {
         }
         val write = runCommand("settings put secure enabled_notification_listeners '$next'")
         return if (write.ok) {
-            ShellResult(true, message = "Список слушателей обновлён через Shizuku")
+            ShellResult(true, message = S["shizuku.listeners_updated"])
         } else {
             write
         }
@@ -185,7 +186,7 @@ object ShizukuManager {
                 "settings put secure accessibility_enabled 1"
         )
         return if (write.ok) {
-            ShellResult(true, message = "Служба доступности включена через Shizuku")
+            ShellResult(true, message = S["shizuku.accessibility_enabled"])
         } else {
             write
         }
@@ -196,19 +197,19 @@ object ShizukuManager {
             val dump = runCommand("dumpsys notification --noredact")
             if (!dump.ok) {
                 return@withContext ImportResult(
-                    message = dump.message.ifBlank { "Не удалось прочитать уведомления" }
+                    message = dump.message.ifBlank { S["shizuku.read_failed"] }
                 )
             }
             if (dump.stdout.isBlank()) {
-                return@withContext ImportResult(message = "dumpsys вернул пустой ответ")
+                return@withContext ImportResult(message = S["shizuku.empty_dump"])
             }
             val count = CaptureEngine.importDump(context, dump.stdout)
             ImportResult(
                 count = count,
                 message = if (count > 0) {
-                    "Импортировано уведомлений: $count"
+                    S.f("shizuku.imported", count)
                 } else {
-                    "Новых уведомлений не найдено (возможно, они уже в журнале)"
+                    S["shizuku.nothing_new"]
                 }
             )
         }
