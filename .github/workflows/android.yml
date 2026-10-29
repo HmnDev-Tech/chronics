@@ -83,7 +83,7 @@ jobs:
 
       - name: Upload debug APK
         if: success()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: chronics-debug-apk
           path: app/build/outputs/apk/debug/*.apk
@@ -92,7 +92,7 @@ jobs:
 
       - name: Upload test reports
         if: failure()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: chronics-test-reports
           path: |
