@@ -143,6 +143,6 @@ and the private reporting channel are described in [SECURITY.md](SECURITY.md).
 
 ## License
 
-No license has been chosen yet. Until one is added, the code is all rights
-reserved and may not be redistributed. This section will be updated before the
-repository becomes public.
+Released under the [GNU General Public License v3.0](LICENSE). You may
+redistribute, modify and build upon the code as long as your derivative work
+stays under GPL-3.0 as well.

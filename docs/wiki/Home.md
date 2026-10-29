@@ -21,7 +21,7 @@ text of notifications and keeps a searchable copy in a local database and in
 | Storage | App-private SQLite + `Downloads/Chronics` |
 | Network | None. The app declares no internet permission |
 | Languages | English, Russian, Kazakh, Spanish, Chinese, Portuguese |
-| License | Not chosen yet — all rights reserved until one is added |
+| License | GNU GPL v3.0 |
 
 ## How capture works
 
