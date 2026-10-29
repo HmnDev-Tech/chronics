@@ -80,7 +80,7 @@ requests do not change them; releases bump both.
 ## Wiki publishing
 
 The wiki pages are kept in `docs/wiki/` so they can be reviewed in pull requests.
-Once the repository is public, run:
+Create the first page in the web UI once (see `docs/wiki/README.md`), then run:
 
 ```bash
 ./scripts/publish-wiki.sh

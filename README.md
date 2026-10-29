@@ -129,6 +129,9 @@ Issues and pull requests are welcome. Please read
 [CONTRIBUTING.md](CONTRIBUTING.md) and the
 [Code of Conduct](CODE_OF_CONDUCT.md) first.
 
+Setup, permissions, privacy and troubleshooting are documented in the
+[Wiki](https://github.com/HmnDev-Tech/chronics/wiki).
+
 - Bug reports use the issue template and include app version, Android version and device.
 - Never paste real notification contents, phone numbers or OTP codes into an issue.
 - Security problems go through [SECURITY.md](SECURITY.md), not the public tracker.

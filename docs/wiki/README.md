@@ -3,9 +3,15 @@
 These pages are the source of the GitHub Wiki. They live in the repository so
 they can be reviewed, diffed and translated in pull requests.
 
-GitHub does not currently allow enabling the wiki for this private repository.
-Once the repository is public (or the plan supports private wikis), publish the
-pages:
+The wiki is enabled for this repository, but GitHub does not allow creating the
+first wiki page over git — the wiki repository does not exist until the first
+page is created in the web UI. Do that once:
+
+1. Open <https://github.com/HmnDev-Tech/chronics/wiki/_new>.
+2. Name the page `Home` and paste the contents of `Home.md`.
+3. Save it.
+
+After that the pages can be published and updated from the command line:
 
 ```bash
 ./scripts/publish-wiki.sh
