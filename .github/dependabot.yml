@@ -15,6 +15,11 @@ updates:
       kotlin:
         patterns:
           - "org.jetbrains.kotlin*"
+    ignore:
+      # AGP 9 compiles Kotlin with its own bundled compiler. The Compose
+      # compiler plugin ships with Kotlin and must match that compiler, so it
+      # is upgraded together with AGP instead of on its own.
+      - dependency-name: "org.jetbrains.kotlin.plugin.compose"
 
   - package-ecosystem: "github-actions"
     directory: "/"
