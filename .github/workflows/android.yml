@@ -10,6 +10,10 @@ on:
 permissions:
   contents: read
 
+concurrency:
+  group: apk-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   build:
     runs-on: ubuntu-latest
@@ -34,19 +38,56 @@ jobs:
       - name: Set up Gradle
         uses: gradle/actions/setup-gradle@v4
 
+      # The same key must sign every APK, otherwise Android refuses to install
+      # an update over the previous build and the app has to be uninstalled.
+      # The key lives in repository secrets and never enters the checkout.
+      - name: Restore signing key
+        env:
+          KEYSTORE_BASE64: ${{ secrets.CHRONICS_KEYSTORE_BASE64 }}
+          KEYSTORE_PASSWORD: ${{ secrets.CHRONICS_STORE_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.CHRONICS_KEY_ALIAS }}
+          KEY_PASSWORD: ${{ secrets.CHRONICS_KEY_PASSWORD }}
+        run: |
+          set -euo pipefail
+          if [ -z "$KEYSTORE_BASE64" ]; then
+            echo "::warning::Signing key secret is missing; the APK will use throwaway debug signing and updates will need a reinstall."
+            exit 0
+          fi
+          KEYSTORE="$RUNNER_TEMP/chronics.keystore"
+          printf '%s' "$KEYSTORE_BASE64" | base64 -d > "$KEYSTORE"
+          {
+            echo "CHRONICS_KEYSTORE_PATH=$KEYSTORE"
+            echo "CHRONICS_STORE_PASSWORD=$KEYSTORE_PASSWORD"
+            echo "CHRONICS_KEY_ALIAS=$KEY_ALIAS"
+            echo "CHRONICS_KEY_PASSWORD=$KEY_PASSWORD"
+          } >> "$GITHUB_ENV"
+          echo "Signing key restored."
+
       - name: Unit tests
         run: ./gradlew testDebugUnitTest --stacktrace
 
       - name: Assemble debug APK
         run: ./gradlew assembleDebug --stacktrace
 
+      - name: Verify APK signature
+        run: |
+          APKSIGNER=$(ls "$ANDROID_HOME"/build-tools/*/apksigner | sort -V | tail -1)
+          APK=$(ls app/build/outputs/apk/debug/*.apk | head -1)
+          "$APKSIGNER" verify --print-certs "$APK" | tee signature.txt
+          {
+            echo "### APK signature"
+            echo '```'
+            cat signature.txt
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
+
       - name: Upload debug APK
-        if: always()
+        if: success()
         uses: actions/upload-artifact@v4
         with:
           name: chronics-debug-apk
           path: app/build/outputs/apk/debug/*.apk
-          if-no-files-found: warn
+          if-no-files-found: error
           retention-days: 30
 
       - name: Upload test reports

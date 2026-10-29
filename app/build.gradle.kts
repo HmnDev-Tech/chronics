@@ -5,6 +5,25 @@ plugins {
     id("org.jetbrains.kotlin.plugin.compose")
 }
 
+/**
+ * A stable signing key is supplied through the environment so that every APK,
+ * from CI or from a local build, carries the same signature and updates install
+ * over the previous build. When the key is absent the build falls back to the
+ * default debug signing, which is fine for throwaway builds only.
+ *
+ * Expected variables:
+ *   CHRONICS_KEYSTORE_PATH    path to a PKCS12 keystore
+ *   CHRONICS_STORE_PASSWORD   keystore password
+ *   CHRONICS_KEY_ALIAS        key alias inside the keystore
+ *   CHRONICS_KEY_PASSWORD     key password (defaults to the store password)
+ */
+val stableKeystoreFile = System.getenv("CHRONICS_KEYSTORE_PATH")
+    ?.let { file(it) }
+    ?.takeIf { it.isFile }
+val stableStorePassword = System.getenv("CHRONICS_STORE_PASSWORD")
+val stableKeyAlias = System.getenv("CHRONICS_KEY_ALIAS") ?: "chronics"
+val stableKeyPassword = System.getenv("CHRONICS_KEY_PASSWORD") ?: stableStorePassword
+
 android {
     namespace = "com.hmndev.chronika"
     compileSdk = 37
@@ -21,8 +40,24 @@ android {
         }
     }
 
+    signingConfigs {
+        stableKeystoreFile?.let { keyStore ->
+            create("stable") {
+                storeFile = keyStore
+                storeType = "PKCS12"
+                storePassword = stableStorePassword
+                keyAlias = stableKeyAlias
+                keyPassword = stableKeyPassword
+            }
+        }
+    }
+
     buildTypes {
+        debug {
+            signingConfigs.findByName("stable")?.let { signingConfig = it }
+        }
         release {
+            signingConfigs.findByName("stable")?.let { signingConfig = it }
             isMinifyEnabled = false
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
