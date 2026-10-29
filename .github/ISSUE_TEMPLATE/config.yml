@@ -1,0 +1,11 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Security vulnerability
+    url: https://github.com/HmnDev-Tech/chronics/security/advisories/new
+    about: Report security problems privately. Never open a public issue for them.
+  - name: Questions and usage help
+    url: https://github.com/HmnDev-Tech/chronics/discussions
+    about: Ask how something works or share a setup.
+  - name: Documentation
+    url: https://github.com/HmnDev-Tech/chronics/wiki
+    about: Installation, permissions, privacy, troubleshooting and build notes.

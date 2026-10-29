@@ -1,0 +1,8 @@
+- [Home](Home)
+- [Installation](Installation)
+- [Permissions](Permissions)
+- [Privacy](Privacy)
+- [Troubleshooting](Troubleshooting)
+- [Building and signing](Building)
+- [Contributing](https://github.com/HmnDev-Tech/chronics/blob/main/CONTRIBUTING.md)
+- [Security](https://github.com/HmnDev-Tech/chronics/blob/main/SECURITY.md)

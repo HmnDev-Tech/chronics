@@ -1,0 +1,94 @@
+name: Bug report
+description: Something is broken or behaves differently than documented
+title: "[Bug]: "
+labels: ["bug", "needs-triage"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for the report. Before you continue:
+
+        - Search [existing issues](https://github.com/HmnDev-Tech/chronics/issues) first.
+        - Try the latest APK from the Actions tab.
+        - **Remove all personal data.** Replace message text, phone numbers, OTP
+          codes, e-mail addresses and chat names with placeholders.
+
+  - type: textarea
+    id: what-happened
+    attributes:
+      label: What happened
+      description: A clear description of the bug and what you expected instead.
+      placeholder: The journal shows an empty attachment preview when a notification contains a picture.
+    validations:
+      required: true
+
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce
+      description: Numbered steps that lead to the problem.
+      placeholder: |
+        1. Enable the notification listener
+        2. Receive a message with an image
+        3. Open the entry
+        4. See the empty preview
+    validations:
+      required: true
+
+  - type: input
+    id: version
+    attributes:
+      label: Chronics build
+      description: Artifact date or commit from the Actions run you installed.
+      placeholder: 2026-10-29, commit 8af60d6
+    validations:
+      required: true
+
+  - type: input
+    id: android
+    attributes:
+      label: Android version
+      placeholder: Android 14 (API 34)
+    validations:
+      required: true
+
+  - type: input
+    id: device
+    attributes:
+      label: Device
+      placeholder: Pixel 7
+    validations:
+      required: true
+
+  - type: dropdown
+    id: source
+    attributes:
+      label: Capture source
+      options:
+        - Notification listener
+        - Accessibility service
+        - Shizuku import
+        - Not sure
+    validations:
+      required: true
+
+  - type: textarea
+    id: logs
+    attributes:
+      label: Logs
+      description: Paste text logs, never screenshots of logs. Remove personal data.
+      render: text
+    validations:
+      required: false
+
+  - type: checkboxes
+    id: confirmations
+    attributes:
+      label: Confirmations
+      options:
+        - label: I searched existing issues and did not find a duplicate.
+          required: true
+        - label: I removed all personal data from this report.
+          required: true
+        - label: This is not a security vulnerability (those go through SECURITY.md).
+          required: true

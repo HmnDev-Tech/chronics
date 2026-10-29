@@ -1,0 +1,65 @@
+name: Feature request
+description: Suggest a capability or an improvement
+title: "[Feature]: "
+labels: ["enhancement", "needs-triage"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Chronics is deliberately offline and local-only. Requests for cloud sync,
+        analytics, accounts or uploading notification data will be closed.
+
+        Search [existing issues](https://github.com/HmnDev-Tech/chronics/issues)
+        before opening a new one.
+
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem
+      description: What are you trying to do that is hard or impossible today?
+      placeholder: I cannot find messages from one specific person because search only matches the notification title.
+    validations:
+      required: true
+
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposed solution
+      description: How should it work? Mention the screen and the expected result.
+    validations:
+      required: true
+
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives considered
+      description: Existing workarounds or other designs you thought about.
+    validations:
+      required: false
+
+  - type: dropdown
+    id: area
+    attributes:
+      label: Area
+      options:
+        - Capture
+        - Journal
+        - Search and filters
+        - Export
+        - Pulse and statistics
+        - Settings and appearance
+        - Languages
+        - Permissions and Shizuku
+        - Other
+    validations:
+      required: true
+
+  - type: checkboxes
+    id: confirmations
+    attributes:
+      label: Confirmations
+      options:
+        - label: This request keeps all data on the device.
+          required: true
+        - label: I searched existing issues and did not find a duplicate.
+          required: true
