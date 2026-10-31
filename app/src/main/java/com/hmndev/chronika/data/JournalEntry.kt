@@ -28,10 +28,10 @@ data class JournalEntry(
     val isPinned: Boolean = false,
     val isArchived: Boolean = false,
     val fingerprint: String = "",
-    val exportPath: String = ""
+    val exportPath: String = "",
 ) {
     val displayTitle: String
-        get() = title.ifBlank { appLabel }
+        get() = title.ifBlank { conversationTitle }.ifBlank { appLabel }
 
     val displayBody: String
         get() = bigText.ifBlank { text }.ifBlank { subText }
@@ -45,21 +45,23 @@ data class JournalStats(
     val today: Int = 0,
     val unread: Int = 0,
     val pinned: Int = 0,
+    val archived: Int = 0,
     val apps: Int = 0,
     val exported: Int = 0,
     val oldest: Long = 0L,
     val newest: Long = 0L,
-    val todayByHour: List<Int> = List(24) { 0 }
+    val todayByHour: List<Int> = List(24) { 0 },
+    val sources: Map<String, Int> = emptyMap(),
 )
 
 data class AppCount(
     val packageName: String,
     val appLabel: String,
-    val count: Int
+    val count: Int,
 )
 
 data class DayCount(
     val dayKey: String,
     val label: String,
-    val count: Int
+    val count: Int,
 )

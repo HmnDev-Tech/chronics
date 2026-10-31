@@ -5,11 +5,11 @@ import android.content.Context
 import android.database.Cursor
 import android.database.sqlite.SQLiteDatabase
 import android.database.sqlite.SQLiteOpenHelper
+import com.hmndev.chronika.i18n.S
 import java.time.Instant
 import java.time.LocalDate
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
-import java.util.Locale
 
 class JournalDb private constructor(context: Context) :
     SQLiteOpenHelper(context.applicationContext, DB_NAME, null, DB_VERSION) {
@@ -68,19 +68,47 @@ class JournalDb private constructor(context: Context) :
     }
 
     @Synchronized
+    fun insertBatch(entries: List<JournalEntry>): Int {
+        if (entries.isEmpty()) return 0
+        val db = writableDatabase
+        var inserted = 0
+        db.beginTransaction()
+        try {
+            entries.forEach { entry ->
+                val id = db.insertWithOnConflict(
+                    TABLE,
+                    null,
+                    valuesOf(entry.copy(id = 0L)),
+                    SQLiteDatabase.CONFLICT_IGNORE
+                )
+                if (id > 0L) inserted += 1
+            }
+            db.setTransactionSuccessful()
+        } finally {
+            db.endTransaction()
+        }
+        return inserted
+    }
+
+    @Synchronized
     fun updateEnrichment(
         id: Long,
         title: String,
         text: String,
         bigText: String,
         subText: String,
+        category: String,
+        channelId: String,
+        channelName: String,
+        groupKey: String,
         conversationTitle: String,
         messagesJson: String,
         actionsJson: String,
         extrasJson: String,
         imagePaths: String,
-        channelName: String,
-        capturedAt: Long
+        source: String,
+        capturedAt: Long,
+        fingerprint: String,
     ) {
         val db = writableDatabase
         val values = ContentValues().apply {
@@ -88,15 +116,22 @@ class JournalDb private constructor(context: Context) :
             put("text", text)
             put("big_text", bigText)
             put("sub_text", subText)
+            put("category", category)
+            put("channel_id", channelId)
+            put("channel_name", channelName)
+            put("group_key", groupKey)
             put("conversation_title", conversationTitle)
             put("messages_json", messagesJson)
             put("actions_json", actionsJson)
             put("extras_json", extrasJson)
             put("image_paths", imagePaths)
-            put("channel_name", channelName)
+            put("source", source)
             put("captured_at", capturedAt)
+            if (fingerprint.isNotBlank()) {
+                put("fingerprint", fingerprint)
+            }
         }
-        db.update(TABLE, values, "id = ?", arrayOf(id.toString()))
+        db.updateWithOnConflict(TABLE, values, "id = ?", arrayOf(id.toString()), SQLiteDatabase.CONFLICT_IGNORE)
     }
 
     @Synchronized
@@ -135,8 +170,8 @@ class JournalDb private constructor(context: Context) :
     fun findRecent(packageName: String, title: String, text: String, since: Long): JournalEntry? {
         readableDatabase.query(
             TABLE, null,
-            "package_name = ? AND title = ? AND text = ? AND posted_at >= ?",
-            arrayOf(packageName, title, text, since.toString()),
+            "package_name = ? AND title = ? AND (text = ? OR big_text = ?) AND posted_at >= ?",
+            arrayOf(packageName, title, text, text, since.toString()),
             null, null, "posted_at DESC", "1"
         ).use { cursor ->
             return if (cursor.moveToFirst()) cursor.toEntry() else null
@@ -158,8 +193,9 @@ class JournalDb private constructor(context: Context) :
     fun stats(): JournalStats {
         val total = scalar("SELECT COUNT(*) FROM $TABLE")
         val exported = scalar("SELECT COUNT(*) FROM $TABLE WHERE export_path != ''")
-        val unread = scalar("SELECT COUNT(*) FROM $TABLE WHERE is_read = 0")
-        val pinned = scalar("SELECT COUNT(*) FROM $TABLE WHERE is_pinned = 1")
+        val unread = scalar("SELECT COUNT(*) FROM $TABLE WHERE is_read = 0 AND is_archived = 0")
+        val pinned = scalar("SELECT COUNT(*) FROM $TABLE WHERE is_pinned = 1 AND is_archived = 0")
+        val archived = scalar("SELECT COUNT(*) FROM $TABLE WHERE is_archived = 1")
         val apps = scalar("SELECT COUNT(DISTINCT package_name) FROM $TABLE")
         val oldest = scalarLong("SELECT COALESCE(MIN(posted_at), 0) FROM $TABLE")
         val newest = scalarLong("SELECT COALESCE(MAX(posted_at), 0) FROM $TABLE")
@@ -176,16 +212,27 @@ class JournalDb private constructor(context: Context) :
                 hours[hour] = hours[hour] + 1
             }
         }
+        val sources = LinkedHashMap<String, Int>()
+        readableDatabase.rawQuery(
+            "SELECT source, COUNT(*) FROM $TABLE GROUP BY source",
+            null
+        ).use { cursor ->
+            while (cursor.moveToNext()) {
+                sources[cursor.getString(0)] = cursor.getInt(1)
+            }
+        }
         return JournalStats(
             total = total,
             today = today,
             unread = unread,
             pinned = pinned,
+            archived = archived,
             apps = apps,
             exported = exported,
             oldest = oldest,
             newest = newest,
-            todayByHour = hours
+            todayByHour = hours,
+            sources = sources
         )
     }
 
@@ -207,7 +254,7 @@ class JournalDb private constructor(context: Context) :
     @Synchronized
     fun dailyCounts(days: Int = 7): List<DayCount> {
         val zone = ZoneId.systemDefault()
-        val labels = DateTimeFormatter.ofPattern("dd.MM", Locale("ru"))
+        val labels = DateTimeFormatter.ofPattern("dd.MM", S.locale)
         val counts = LinkedHashMap<LocalDate, Int>()
         val today = LocalDate.now(zone)
         for (i in days - 1 downTo 0) counts[today.minusDays(i.toLong())] = 0
@@ -231,6 +278,12 @@ class JournalDb private constructor(context: Context) :
     }
 
     @Synchronized
+    fun markAllRead(): Int {
+        val values = ContentValues().apply { put("is_read", 1) }
+        return writableDatabase.update(TABLE, values, "is_read = 0", null)
+    }
+
+    @Synchronized
     fun setPinned(id: Long, pinned: Boolean) {
         val values = ContentValues().apply { put("is_pinned", if (pinned) 1 else 0) }
         writableDatabase.update(TABLE, values, "id = ?", arrayOf(id.toString()))
@@ -238,7 +291,10 @@ class JournalDb private constructor(context: Context) :
 
     @Synchronized
     fun setArchived(id: Long, archived: Boolean) {
-        val values = ContentValues().apply { put("is_archived", if (archived) 1 else 0) }
+        val values = ContentValues().apply {
+            put("is_archived", if (archived) 1 else 0)
+            if (archived) put("is_read", 1)
+        }
         writableDatabase.update(TABLE, values, "id = ?", arrayOf(id.toString()))
     }
 
@@ -253,10 +309,15 @@ class JournalDb private constructor(context: Context) :
     }
 
     @Synchronized
-    fun cleanup(retentionDays: Int, maxEntries: Int) {
+    fun cleanup(retentionDays: Int, maxEntries: Int): Int {
+        var removed = 0
         if (retentionDays > 0) {
             val cutoff = System.currentTimeMillis() - retentionDays.toLong() * 86_400_000L
-            writableDatabase.delete(TABLE, "posted_at < ? AND is_pinned = 0", arrayOf(cutoff.toString()))
+            removed += writableDatabase.delete(
+                TABLE,
+                "posted_at < ? AND is_pinned = 0",
+                arrayOf(cutoff.toString())
+            )
         }
         if (maxEntries > 0) {
             val total = scalar("SELECT COUNT(*) FROM $TABLE")
@@ -266,8 +327,10 @@ class JournalDb private constructor(context: Context) :
                     "DELETE FROM $TABLE WHERE id IN " +
                         "(SELECT id FROM $TABLE WHERE is_pinned = 0 ORDER BY posted_at ASC LIMIT $overflow)"
                 )
+                removed += overflow
             }
         }
+        return removed
     }
 
     private fun scalar(sql: String): Int {

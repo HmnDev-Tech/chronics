@@ -1,9 +1,8 @@
 package com.hmndev.chronika.ui.screens
 
-import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -13,8 +12,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.AutoAwesome
@@ -26,9 +23,9 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -45,8 +42,6 @@ import com.hmndev.chronika.ui.components.MetaPill
 import com.hmndev.chronika.ui.components.SectionHeading
 import com.hmndev.chronika.ui.components.StorageWave
 import com.hmndev.chronika.ui.components.TopAppRow
-import com.hmndev.chronika.ui.theme.Coral
-import com.hmndev.chronika.ui.theme.Lime
 
 @Composable
 fun InsightsScreen(
@@ -54,11 +49,17 @@ fun InsightsScreen(
     topApps: List<AppCount>,
     daily: List<DayCount>,
     entries: List<JournalEntry>,
-    settings: AppSettings
+    settings: AppSettings,
 ) {
     val scheme = MaterialTheme.colorScheme
     val device = LocalDeviceProfile.current
-    val sources = entries.groupingBy { it.source }.eachCount()
+    val sources = remember(stats.sources, entries) {
+        if (stats.sources.isNotEmpty()) {
+            stats.sources
+        } else {
+            entries.groupingBy { it.source }.eachCount()
+        }
+    }
     LazyColumn(
         contentPadding = PaddingValues(
             start = device.screenPadding,
@@ -158,7 +159,10 @@ fun InsightsScreen(
         }
 
         item(key = "sources") {
-            Row(horizontalArrangement = Arrangement.spacedBy(7.dp)) {
+            FlowRow(
+                horizontalArrangement = Arrangement.spacedBy(7.dp),
+                verticalArrangement = Arrangement.spacedBy(7.dp)
+            ) {
                 MetaPill(
                     text = S.f("insights.source_listener", sources["listener"] ?: 0),
                     container = scheme.primaryContainer,
@@ -205,7 +209,7 @@ fun InsightsScreen(
 
         item(key = "footnote") {
             Text(
-                text = S.f("insights.footnote", settings.folderName.ifBlank { "Chronics" }),
+                text = S.f("insights.footnote", settings.safeFolderName),
                 style = MaterialTheme.typography.bodySmall,
                 color = scheme.onSurfaceVariant
             )
@@ -220,7 +224,7 @@ private fun InsightStat(
     icon: androidx.compose.ui.graphics.vector.ImageVector,
     container: Color,
     content: Color,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
 ) {
     Surface(
         modifier = modifier,

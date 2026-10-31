@@ -1,6 +1,7 @@
 package com.hmndev.chronika.ui
 
 import android.app.Application
+import android.net.Uri
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.hmndev.chronika.data.AppCount
@@ -15,6 +16,7 @@ import com.hmndev.chronika.i18n.S
 import com.hmndev.chronika.service.CaptureEngine
 import com.hmndev.chronika.shizuku.ImportResult
 import com.hmndev.chronika.shizuku.ShizukuManager
+import com.hmndev.chronika.util.BackupImportResult
 import com.hmndev.chronika.util.ExportManager
 import com.hmndev.chronika.util.ExportResult
 import kotlinx.coroutines.Dispatchers
@@ -68,11 +70,22 @@ class JournalViewModel(application: Application) : AndroidViewModel(application)
     }
 
     fun updateSettings(transform: (AppSettings) -> AppSettings) {
+        val before = SettingsStore.current()
         SettingsStore.update(transform)
+        val after = SettingsStore.current()
+        if (after.retentionDays != before.retentionDays || after.maxEntries != before.maxEntries) {
+            viewModelScope.launch(Dispatchers.IO) {
+                repo.cleanup(after)
+            }
+        }
     }
 
     fun markRead(entry: JournalEntry, read: Boolean = true) {
         viewModelScope.launch(Dispatchers.IO) { repo.markRead(entry.id, read) }
+    }
+
+    fun markAllRead() {
+        viewModelScope.launch(Dispatchers.IO) { repo.markAllRead() }
     }
 
     fun togglePin(entry: JournalEntry) {
@@ -90,7 +103,6 @@ class JournalViewModel(application: Application) : AndroidViewModel(application)
     fun deleteAll() {
         viewModelScope.launch(Dispatchers.IO) {
             repo.deleteAll()
-            JournalStore.changed()
         }
     }
 
@@ -113,6 +125,9 @@ class JournalViewModel(application: Application) : AndroidViewModel(application)
     suspend fun exportAll(): ExportResult =
         ExportManager.exportAll(getApplication(), entries.value, settings.value)
 
+    suspend fun importBackup(uri: Uri): BackupImportResult =
+        ExportManager.importBackup(getApplication(), uri)
+
     fun testNotification(): Boolean =
         CaptureEngine.postTestNotification(getApplication())
 
@@ -133,6 +148,6 @@ class JournalViewModel(application: Application) : AndroidViewModel(application)
         val entries: List<JournalEntry>,
         val stats: JournalStats,
         val apps: List<AppCount>,
-        val daily: List<DayCount>
+        val daily: List<DayCount>,
     )
 }

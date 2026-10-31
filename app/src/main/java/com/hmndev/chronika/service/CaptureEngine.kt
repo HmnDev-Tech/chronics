@@ -25,11 +25,16 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.launch
+import org.json.JSONArray
 import java.util.concurrent.ConcurrentHashMap
 
 object CaptureEngine {
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
     private val labels = ConcurrentHashMap<String, String>()
+
+    fun clearLabelCache() {
+        labels.clear()
+    }
 
     fun captureNotification(context: Context, sbn: StatusBarNotification) {
         val settings = SettingsStore.current()
@@ -43,8 +48,8 @@ object CaptureEngine {
         if (parsed.isOngoing && settings.ignoreOngoing) return
         if (parsed.isSilent && settings.ignoreSilent) return
         if (parsed.priority < settings.minPriority) return
-        val haystack = "${parsed.title} ${parsed.text} ${parsed.bigText} ${parsed.conversationTitle} " +
-            parsed.messages.joinToString(" ") { it.text }
+        val haystack = "${parsed.title} ${parsed.text} ${parsed.bigText} ${parsed.subText} " +
+            "${parsed.conversationTitle} " + parsed.messages.joinToString(" ") { "${it.sender} ${it.text}" }
         if (!settings.keywordAllowed(haystack)) return
 
         val app = context.applicationContext
@@ -57,7 +62,7 @@ object CaptureEngine {
         context: Context,
         packageName: String,
         texts: List<String>,
-        contentDescription: String?
+        contentDescription: String?,
     ) {
         val settings = SettingsStore.current()
         if (!settings.captureEnabled || !settings.captureAccessibility) return
@@ -65,12 +70,14 @@ object CaptureEngine {
         if (!settings.appAllowed(packageName)) return
         val cleaned = texts.map { it.trim() }.filter { it.isNotBlank() }.distinct()
         if (cleaned.isEmpty()) return
-        val title = cleaned.first()
-        val body = cleaned.drop(1).joinToString(" · ")
+        val rawTitle = cleaned.first()
+        val rawBody = cleaned.drop(1).joinToString(" · ")
             .ifBlank { contentDescription?.trim().orEmpty() }
-        if (title.length < 2 && body.isBlank()) return
-        if (!settings.keywordAllowed("$title $body")) return
+        if (rawTitle.length < 2 && rawBody.isBlank()) return
+        if (!settings.keywordAllowed("$rawTitle $rawBody")) return
 
+        val title = mask(rawTitle, settings)
+        val body = mask(rawBody, settings)
         val now = System.currentTimeMillis()
         val fingerprint = Fingerprint.of(
             packageName,
@@ -82,12 +89,14 @@ object CaptureEngine {
         scope.launch {
             val repo = JournalRepository(app)
             if (repo.findByFingerprint(fingerprint) != null) return@launch
-            if (repo.findRecent(packageName, title, body, now - 120_000L) != null) return@launch
+            if (settings.dedupe && repo.findRecent(packageName, title, body, now - 120_000L) != null) {
+                return@launch
+            }
             val entry = JournalEntry(
                 packageName = packageName,
                 appLabel = label(app, packageName),
-                title = mask(title, settings),
-                text = mask(body, settings),
+                title = title,
+                text = body,
                 bigText = "",
                 subText = "",
                 category = "accessibility",
@@ -110,8 +119,9 @@ object CaptureEngine {
             )
             val id = repo.insert(entry)
             if (id > 0 && settings.autoExport) {
-                exportNow(app, repo, id, settings)
+                exportNowSync(app, repo, id, settings)
             }
+            repo.cleanup(settings)
         }
     }
 
@@ -124,24 +134,33 @@ object CaptureEngine {
             if (record.packageName.isBlank()) return@forEach
             if (record.packageName == app.packageName) return@forEach
             if (!settings.appAllowed(record.packageName)) return@forEach
+            if (record.isOngoing && settings.ignoreOngoing) return@forEach
             if (!settings.keywordAllowed("${record.title} ${record.text} ${record.bigText}")) return@forEach
             val postedAt = if (record.postedAt > 0) record.postedAt else System.currentTimeMillis()
+            val maskedTitle = mask(record.title, settings)
+            val maskedText = mask(record.text, settings)
+            val maskedBigText = mask(record.bigText, settings)
             val fingerprint = Fingerprint.of(
                 record.packageName,
-                record.title,
-                record.text,
-                record.bigText,
+                maskedTitle,
+                maskedText,
+                maskedBigText,
                 "shizuku",
-                (postedAt / 60_000L).toString()
+                if (settings.dedupe) (postedAt / 60_000L).toString() else postedAt.toString()
             )
             if (repo.findByFingerprint(fingerprint) != null) return@forEach
+            if (settings.dedupe &&
+                repo.findRecent(record.packageName, maskedTitle, maskedText, postedAt - 120_000L) != null
+            ) {
+                return@forEach
+            }
             val entry = JournalEntry(
                 packageName = record.packageName,
                 appLabel = label(app, record.packageName),
-                title = mask(record.title, settings),
-                text = mask(record.text, settings),
-                bigText = mask(record.bigText, settings),
-                subText = "",
+                title = maskedTitle,
+                text = maskedText,
+                bigText = maskedBigText,
+                subText = mask(record.subText, settings),
                 category = "shizuku",
                 channelId = "shizuku",
                 channelName = S["capture.shizuku_channel"],
@@ -154,8 +173,8 @@ object CaptureEngine {
                 source = "shizuku",
                 postedAt = postedAt,
                 capturedAt = System.currentTimeMillis(),
-                isOngoing = false,
-                isClearable = true,
+                isOngoing = record.isOngoing,
+                isClearable = !record.isOngoing,
                 priority = 0,
                 isSilent = false,
                 fingerprint = fingerprint
@@ -163,7 +182,7 @@ object CaptureEngine {
             val id = repo.insert(entry)
             if (id > 0) {
                 imported += 1
-                if (settings.autoExport) exportNow(app, repo, id, settings)
+                if (settings.autoExport) exportNowSync(app, repo, id, settings)
             }
         }
         repo.cleanup(settings)
@@ -204,7 +223,7 @@ object CaptureEngine {
                 .build()
             manager.notify(9001, notification)
             true
-        } catch (t: Throwable) {
+        } catch (_: Throwable) {
             false
         }
     }
@@ -212,12 +231,17 @@ object CaptureEngine {
     private fun storeNotification(
         context: Context,
         parsed: ParsedNotification,
-        settings: AppSettings
+        settings: AppSettings,
     ) {
         val repo = JournalRepository(context)
         val masked = maskParsed(parsed, settings)
         val now = System.currentTimeMillis()
         val existing = repo.findByFingerprint(masked.fingerprint)
+            ?: if (settings.dedupe && masked.title.isNotBlank()) {
+                repo.findRecent(masked.packageName, masked.title, masked.text, masked.postedAt - 60_000L)
+            } else {
+                null
+            }
         val base = JournalEntry(
             packageName = masked.packageName,
             appLabel = label(context, masked.packageName),
@@ -253,55 +277,96 @@ object CaptureEngine {
                 text = base.text.ifBlank { existing.text },
                 bigText = base.bigText.ifBlank { existing.bigText },
                 subText = base.subText.ifBlank { existing.subText },
+                category = base.category.ifBlank { existing.category },
+                channelId = base.channelId.ifBlank { existing.channelId },
+                channelName = base.channelName.ifBlank { existing.channelName },
+                groupKey = base.groupKey.ifBlank { existing.groupKey },
                 conversationTitle = base.conversationTitle.ifBlank { existing.conversationTitle },
                 messagesJson = if (base.messagesJson == "[]") existing.messagesJson else base.messagesJson,
                 actionsJson = if (base.actionsJson == "[]") existing.actionsJson else base.actionsJson,
                 extrasJson = if (base.extrasJson == "{}") existing.extrasJson else base.extrasJson,
                 imagePaths = existing.imagePaths,
+                source = "listener",
                 postedAt = existing.postedAt,
-                capturedAt = now
+                capturedAt = now,
+                fingerprint = masked.fingerprint
             )
             repo.enrich(merged)
             existing.id
         } else {
             repo.insert(base)
         }
-        if (id > 0 && settings.autoExport) {
-            exportNow(context, repo, id, settings)
+        if (id > 0) {
+            if (settings.autoExport) {
+                exportNowSync(context, repo, id, settings)
+            } else if (settings.saveImages && masked.images.isNotEmpty()) {
+                val fresh = repo.findById(id)
+                if (fresh != null) {
+                    val savedPaths = ExportManager.saveImagesOnly(context, fresh, settings)
+                    if (savedPaths.isNotEmpty()) {
+                        repo.setImagePaths(
+                            id,
+                            JSONArray().apply { savedPaths.forEach { put(it) } }.toString()
+                        )
+                    }
+                }
+            }
         }
         repo.cleanup(settings)
     }
 
-    private fun exportNow(
+    private fun exportNowSync(
         context: Context,
         repo: JournalRepository,
         id: Long,
-        settings: AppSettings
+        settings: AppSettings,
     ) {
         val fresh = repo.findById(id) ?: return
-        scope.launch {
-            val result = ExportManager.export(context, fresh, settings)
-            if (result.imagePaths.isNotEmpty()) {
-                repo.setImagePaths(
-                    id,
-                    org.json.JSONArray().apply { result.imagePaths.forEach { put(it) } }.toString()
-                )
-            }
-            if (result.jsonPath.isNotBlank() || result.txtPath.isNotBlank()) {
-                repo.setExportPath(id, result.jsonPath.ifBlank { result.txtPath })
-            }
+        val result = ExportManager.exportSync(context, fresh, settings)
+        if (result.imagePaths.isNotEmpty()) {
+            repo.setImagePaths(
+                id,
+                JSONArray().apply { result.imagePaths.forEach { put(it) } }.toString()
+            )
+        }
+        if (result.jsonPath.isNotBlank() || result.txtPath.isNotBlank()) {
+            repo.setExportPath(id, result.jsonPath.ifBlank { result.txtPath })
         }
     }
 
-    private fun maskParsed(parsed: ParsedNotification, settings: AppSettings): ParsedNotification {
+    internal fun maskParsed(parsed: ParsedNotification, settings: AppSettings): ParsedNotification {
         if (!settings.maskSecrets) return parsed
+        val maskedTitle = TextTools.maskSecrets(parsed.title)
+        val maskedText = TextTools.maskSecrets(parsed.text)
+        val maskedBigText = TextTools.maskSecrets(parsed.bigText)
+        val maskedSubText = TextTools.maskSecrets(parsed.subText)
+        val maskedConversation = TextTools.maskSecrets(parsed.conversationTitle)
+        val maskedMessages = parsed.messages.map {
+            it.copy(
+                sender = TextTools.maskSecrets(it.sender),
+                text = TextTools.maskSecrets(it.text)
+            )
+        }
+        val maskedExtras = TextTools.maskJsonStrings(parsed.extrasJson)
+        val maskedFingerprint = NotificationParser.computeFingerprint(
+            packageName = parsed.packageName,
+            title = maskedTitle,
+            text = maskedText,
+            bigText = maskedBigText,
+            conversationTitle = maskedConversation,
+            messages = maskedMessages,
+            postedAt = parsed.postedAt,
+            dedupe = settings.dedupe
+        )
         return parsed.copy(
-            title = TextTools.maskSecrets(parsed.title),
-            text = TextTools.maskSecrets(parsed.text),
-            bigText = TextTools.maskSecrets(parsed.bigText),
-            subText = TextTools.maskSecrets(parsed.subText),
-            conversationTitle = TextTools.maskSecrets(parsed.conversationTitle),
-            messages = parsed.messages.map { it.copy(text = TextTools.maskSecrets(it.text)) }
+            title = maskedTitle,
+            text = maskedText,
+            bigText = maskedBigText,
+            subText = maskedSubText,
+            conversationTitle = maskedConversation,
+            messages = maskedMessages,
+            extrasJson = maskedExtras,
+            fingerprint = maskedFingerprint
         )
     }
 
@@ -317,42 +382,60 @@ object CaptureEngine {
         }
     }
 
-    private data class DumpRecord(
+    internal data class DumpRecord(
         var packageName: String = "",
         var title: String = "",
         var text: String = "",
         var bigText: String = "",
-        var postedAt: Long = 0L
+        var subText: String = "",
+        var postedAt: Long = 0L,
+        var isOngoing: Boolean = false,
     ) {
         fun hasContent(): Boolean =
             title.isNotBlank() || text.isNotBlank() || bigText.isNotBlank()
     }
 
-    private fun parseDump(dump: String): List<DumpRecord> {
+    internal fun parseDump(dump: String): List<DumpRecord> {
         val result = ArrayList<DumpRecord>()
         var current: DumpRecord? = null
         val pkgRegex = Regex("pkg=([A-Za-z0-9._]+)")
         val timeRegex = Regex("(?:postTime|when)=(\\d{10,})")
+        val flagsRegex = Regex("flags=0x([0-9a-fA-F]+)")
         fun flush() {
             current?.let { if (it.hasContent()) result.add(it) }
             current = null
         }
         dump.lineSequence().forEach { line ->
-            if (line.contains("NotificationRecord(")) {
+            val trimmed = line.trimStart()
+            if (trimmed.contains("NotificationRecord(")) {
                 flush()
                 current = DumpRecord(
-                    packageName = pkgRegex.find(line)?.groupValues?.getOrNull(1).orEmpty()
+                    packageName = pkgRegex.find(trimmed)?.groupValues?.getOrNull(1).orEmpty()
                 )
             }
             val record = current ?: return@forEach
             when {
-                line.contains("android.title=") -> record.title = dumpValue(line)
-                line.contains("android.text=") -> record.text = dumpValue(line)
-                line.contains("android.bigText=") -> record.bigText = dumpValue(line)
-                line.contains("tickerText=") && record.text.isBlank() -> record.text = dumpValue(line)
-                timeRegex.containsMatchIn(line) -> {
-                    timeRegex.find(line)?.groupValues?.getOrNull(1)?.toLongOrNull()?.let {
-                        if (it > 0) record.postedAt = it
+                trimmed.startsWith("android.title=") || line.contains(" android.title=") ->
+                    record.title = dumpValue(line.substringAfter("android.title="))
+                trimmed.startsWith("android.text=") || line.contains(" android.text=") ->
+                    record.text = dumpValue(line.substringAfter("android.text="))
+                trimmed.startsWith("android.bigText=") || line.contains(" android.bigText=") ->
+                    record.bigText = dumpValue(line.substringAfter("android.bigText="))
+                trimmed.startsWith("android.subText=") || line.contains(" android.subText=") ->
+                    record.subText = dumpValue(line.substringAfter("android.subText="))
+                (trimmed.startsWith("tickerText=") || line.contains(" tickerText=")) && record.text.isBlank() ->
+                    record.text = dumpValue(line.substringAfter("tickerText="))
+                else -> {
+                    if (timeRegex.containsMatchIn(line)) {
+                        timeRegex.find(line)?.groupValues?.getOrNull(1)?.toLongOrNull()?.let {
+                            if (it > 0) record.postedAt = it
+                        }
+                    }
+                    if (flagsRegex.containsMatchIn(line)) {
+                        flagsRegex.find(line)?.groupValues?.getOrNull(1)?.toIntOrNull(16)?.let { flags ->
+                            // Notification.FLAG_ONGOING_EVENT == 0x00000002
+                            if ((flags and 0x2) != 0) record.isOngoing = true
+                        }
                     }
                 }
             }
@@ -361,11 +444,18 @@ object CaptureEngine {
         return result
     }
 
-    private fun dumpValue(line: String): String {
-        var value = line.substringAfter('=', "").trim()
-        value = value.removePrefix("String (").removePrefix("SpannableString (")
-        if (value.endsWith(")")) value = value.dropLast(1)
-        if (value == "null") return ""
-        return value.trim()
+    internal fun dumpValue(rawAfterEquals: String): String {
+        val raw = rawAfterEquals.trim()
+        if (raw.isEmpty() || raw == "null") return ""
+        val unwrapped = when {
+            raw.startsWith("String (") && raw.endsWith(")") ->
+                raw.removePrefix("String (").dropLast(1)
+            raw.startsWith("SpannableString (") && raw.endsWith(")") ->
+                raw.removePrefix("SpannableString (").dropLast(1)
+            raw.startsWith("String(") && raw.endsWith(")") ->
+                raw.removePrefix("String(").dropLast(1)
+            else -> raw
+        }
+        return if (unwrapped == "null") "" else unwrapped.trim()
     }
 }

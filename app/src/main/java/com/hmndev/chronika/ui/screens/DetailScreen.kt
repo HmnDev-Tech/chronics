@@ -3,13 +3,17 @@ package com.hmndev.chronika.ui.screens
 import android.content.ClipData
 import android.content.ClipboardManager
 import android.content.Context
+import android.content.Intent
 import android.graphics.BitmapFactory
 import android.net.Uri
+import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -23,11 +27,9 @@ import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.selection.SelectionContainer
-import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Archive
 import androidx.compose.material.icons.rounded.ArrowBack
@@ -35,7 +37,12 @@ import androidx.compose.material.icons.rounded.ContentCopy
 import androidx.compose.material.icons.rounded.Delete
 import androidx.compose.material.icons.rounded.Download
 import androidx.compose.material.icons.rounded.ExpandMore
+import androidx.compose.material.icons.rounded.MarkEmailRead
+import androidx.compose.material.icons.rounded.MarkEmailUnread
+import androidx.compose.material.icons.rounded.OpenInNew
 import androidx.compose.material.icons.rounded.PushPin
+import androidx.compose.material.icons.rounded.Share
+import androidx.compose.material.icons.rounded.Unarchive
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.FilledTonalButton
@@ -51,10 +58,12 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
@@ -68,31 +77,46 @@ import com.hmndev.chronika.i18n.S
 import com.hmndev.chronika.ui.LocalDeviceProfile
 import com.hmndev.chronika.ui.components.AppIcon
 import com.hmndev.chronika.ui.components.MetaPill
-import com.hmndev.chronika.ui.theme.Coral
 import com.hmndev.chronika.ui.theme.Lime
 import com.hmndev.chronika.util.EntryFormat
 import com.hmndev.chronika.util.TextTools
 import com.hmndev.chronika.util.TimeTools
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
+import java.io.File
 
 @Composable
 fun DetailScreen(
     entry: JournalEntry,
+    showRawByDefault: Boolean = false,
     onBack: () -> Unit,
     onPin: () -> Unit,
+    onToggleRead: () -> Unit = {},
     onArchive: () -> Unit,
     onDelete: () -> Unit,
-    onExport: () -> Unit
+    onExport: () -> Unit,
+    onCopied: () -> Unit = {},
 ) {
     val scheme = MaterialTheme.colorScheme
     val device = LocalDeviceProfile.current
     val context = LocalContext.current
     var showDelete by remember { mutableStateOf(false) }
-    var showRaw by remember { mutableStateOf(false) }
-    val messages = EntryFormat.messages(entry)
-    val actions = EntryFormat.actions(entry)
-    val images = EntryFormat.images(entry)
+    var showRaw by rememberSaveable(entry.id) { mutableStateOf(showRawByDefault) }
+    val messages = remember(entry.messagesJson) { EntryFormat.messages(entry) }
+    val actions = remember(entry.actionsJson) { EntryFormat.actions(entry) }
+    val images = remember(entry.imagePaths) { EntryFormat.images(entry) }
+    val canOpenApp = remember(entry.packageName) {
+        runCatching {
+            context.packageManager.getLaunchIntentForPackage(entry.packageName) != null
+        }.getOrDefault(false)
+    }
+    val rawFormatted = remember(entry.extrasJson) {
+        TextTools.prettyJson(entry.extrasJson.ifBlank { "{}" })
+    }
+    val chevronRotation by animateFloatAsState(
+        targetValue = if (showRaw) 180f else 0f,
+        label = "rawExpand"
+    )
 
     Surface(
         modifier = Modifier.fillMaxSize(),
@@ -110,6 +134,21 @@ fun DetailScreen(
                     Icon(Icons.Rounded.ArrowBack, contentDescription = S["common.back"])
                 }
                 Spacer(Modifier.weight(1f))
+                IconButton(onClick = onToggleRead) {
+                    Icon(
+                        imageVector = if (entry.isRead) {
+                            Icons.Rounded.MarkEmailUnread
+                        } else {
+                            Icons.Rounded.MarkEmailRead
+                        },
+                        contentDescription = if (entry.isRead) {
+                            S["detail.mark_unread"]
+                        } else {
+                            S["detail.mark_read"]
+                        },
+                        tint = if (!entry.isRead) scheme.primary else scheme.onSurfaceVariant
+                    )
+                }
                 IconButton(onClick = onPin) {
                     Icon(
                         Icons.Rounded.PushPin,
@@ -119,9 +158,16 @@ fun DetailScreen(
                 }
                 IconButton(onClick = onArchive) {
                     Icon(
-                        Icons.Rounded.Archive,
-                        contentDescription = S["detail.archive"],
+                        imageVector = if (entry.isArchived) Icons.Rounded.Unarchive else Icons.Rounded.Archive,
+                        contentDescription = if (entry.isArchived) S["detail.unarchive"] else S["detail.archive"],
                         tint = if (entry.isArchived) scheme.tertiary else scheme.onSurfaceVariant
+                    )
+                }
+                IconButton(onClick = { shareEntry(context, entry) }) {
+                    Icon(
+                        Icons.Rounded.Share,
+                        contentDescription = S["detail.share"],
+                        tint = scheme.onSurfaceVariant
                     )
                 }
                 IconButton(onClick = { showDelete = true }) {
@@ -167,13 +213,31 @@ fun DetailScreen(
                                 color = scheme.onSurfaceVariant
                             )
                         }
+                        if (canOpenApp) {
+                            OutlinedButton(
+                                onClick = { openSourceApp(context, entry.packageName) },
+                                shape = CircleShape,
+                                contentPadding = PaddingValues(horizontal = 12.dp, vertical = 6.dp)
+                            ) {
+                                Icon(
+                                    Icons.Rounded.OpenInNew,
+                                    contentDescription = null,
+                                    modifier = Modifier.size(15.dp)
+                                )
+                                Spacer(Modifier.width(5.dp))
+                                Text(
+                                    text = S["detail.open_app"],
+                                    style = MaterialTheme.typography.labelMedium
+                                )
+                            }
+                        }
                     }
                 }
 
                 item(key = "chips") {
-                    Row(
+                    FlowRow(
                         horizontalArrangement = Arrangement.spacedBy(6.dp),
-                        verticalAlignment = Alignment.CenterVertically
+                        verticalArrangement = Arrangement.spacedBy(6.dp)
                     ) {
                         MetaPill(
                             text = EntryFormat.sourceLabel(entry.source),
@@ -190,6 +254,13 @@ fun DetailScreen(
                                 text = S["detail.pinned"],
                                 container = scheme.primaryContainer,
                                 content = scheme.onPrimaryContainer
+                            )
+                        }
+                        if (entry.isArchived) {
+                            MetaPill(
+                                text = S["detail.archived"],
+                                container = scheme.secondaryContainer,
+                                content = scheme.onSecondaryContainer
                             )
                         }
                         if (entry.isOngoing) {
@@ -219,12 +290,14 @@ fun DetailScreen(
                             color = scheme.surfaceContainerLow,
                             modifier = Modifier.fillMaxWidth()
                         ) {
-                            Text(
-                                text = entry.displayBody,
-                                style = MaterialTheme.typography.bodyLarge,
-                                modifier = Modifier.padding(18.dp),
-                                color = scheme.onSurface
-                            )
+                            SelectionContainer {
+                                Text(
+                                    text = entry.displayBody,
+                                    style = MaterialTheme.typography.bodyLarge,
+                                    modifier = Modifier.padding(18.dp),
+                                    color = scheme.onSurface
+                                )
+                            }
                         }
                     }
                 }
@@ -264,8 +337,11 @@ fun DetailScreen(
                                 color = scheme.onSurfaceVariant
                             )
                             Spacer(Modifier.height(6.dp))
-                            Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                                actions.take(4).forEach { action ->
+                            FlowRow(
+                                horizontalArrangement = Arrangement.spacedBy(6.dp),
+                                verticalArrangement = Arrangement.spacedBy(6.dp)
+                            ) {
+                                actions.forEach { action ->
                                     MetaPill(
                                         text = action,
                                         container = scheme.secondaryContainer,
@@ -304,7 +380,9 @@ fun DetailScreen(
                     ) {
                         Column(Modifier.padding(16.dp)) {
                             Row(
-                                modifier = Modifier.fillMaxWidth(),
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .clickable { showRaw = !showRaw },
                                 verticalAlignment = Alignment.CenterVertically
                             ) {
                                 Text(
@@ -317,14 +395,15 @@ fun DetailScreen(
                                     Icon(
                                         imageVector = Icons.Rounded.ExpandMore,
                                         contentDescription = S["detail.show"],
-                                        tint = scheme.onSurfaceVariant
+                                        tint = scheme.onSurfaceVariant,
+                                        modifier = Modifier.rotate(chevronRotation)
                                     )
                                 }
                             }
                             if (showRaw) {
                                 SelectionContainer {
                                     Text(
-                                        text = entry.extrasJson.ifBlank { "{}" },
+                                        text = rawFormatted,
                                         style = MaterialTheme.typography.bodySmall.copy(
                                             fontFamily = FontFamily.Monospace,
                                             fontSize = 11.sp
@@ -349,6 +428,7 @@ fun DetailScreen(
                 FilledTonalButton(
                     onClick = {
                         copyToClipboard(context, entry)
+                        onCopied()
                     },
                     shape = CircleShape,
                     modifier = Modifier.weight(1f)
@@ -424,11 +504,13 @@ private fun MessageTape(message: com.hmndev.chronika.util.MessageView) {
                     }
                 }
                 Spacer(Modifier.height(3.dp))
-                Text(
-                    text = message.text,
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = scheme.onSurface
-                )
+                SelectionContainer {
+                    Text(
+                        text = message.text,
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = scheme.onSurface
+                    )
+                }
             }
         }
     }
@@ -459,9 +541,18 @@ private fun LocalImage(path: String) {
     val bitmap by produceState<androidx.compose.ui.graphics.ImageBitmap?>(null, path) {
         value = withContext(Dispatchers.IO) {
             runCatching {
-                val uri = Uri.parse(path)
-                context.contentResolver.openInputStream(uri)?.use { stream ->
-                    BitmapFactory.decodeStream(stream)?.asImageBitmap()
+                if (path.startsWith("content://") || path.startsWith("file://")) {
+                    val uri = Uri.parse(path)
+                    context.contentResolver.openInputStream(uri)?.use { stream ->
+                        BitmapFactory.decodeStream(stream)?.asImageBitmap()
+                    }
+                } else {
+                    val file = File(path)
+                    if (file.isFile) {
+                        BitmapFactory.decodeFile(file.absolutePath)?.asImageBitmap()
+                    } else {
+                        null
+                    }
                 }
             }.getOrNull()
         }
@@ -484,18 +575,44 @@ private fun LocalImage(path: String) {
     }
 }
 
-private fun copyToClipboard(context: Context, entry: JournalEntry) {
-    val text = buildString {
-        appendLine("${entry.appLabel} · ${entry.displayTitle}")
-        appendLine(TimeTools.full(entry.postedAt))
+private fun formatShareText(entry: JournalEntry): String = buildString {
+    appendLine("${entry.appLabel} · ${entry.displayTitle}")
+    appendLine(TimeTools.full(entry.postedAt))
+    if (entry.displayBody.isNotBlank()) {
         appendLine()
         appendLine(entry.displayBody)
-        val messages = EntryFormat.messages(entry)
-        if (messages.isNotEmpty()) {
-            appendLine()
-            messages.forEach { appendLine("${it.sender}: ${it.text}") }
-        }
     }
+    val messages = EntryFormat.messages(entry)
+    if (messages.isNotEmpty()) {
+        appendLine()
+        messages.forEach { appendLine("${it.sender.ifBlank { S["common.unnamed"] }}: ${it.text}") }
+    }
+}.trimEnd()
+
+private fun copyToClipboard(context: Context, entry: JournalEntry) {
+    val text = formatShareText(entry)
     val clipboard = context.getSystemService(ClipboardManager::class.java)
     clipboard?.setPrimaryClip(ClipData.newPlainText(S["app.name"], text))
+}
+
+private fun shareEntry(context: Context, entry: JournalEntry) {
+    runCatching {
+        val text = formatShareText(entry)
+        val send = Intent(Intent.ACTION_SEND).apply {
+            type = "text/plain"
+            putExtra(Intent.EXTRA_SUBJECT, "${entry.appLabel} · ${entry.displayTitle}")
+            putExtra(Intent.EXTRA_TEXT, text)
+        }
+        context.startActivity(
+            Intent.createChooser(send, S["detail.share"]).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+        )
+    }
+}
+
+private fun openSourceApp(context: Context, packageName: String) {
+    runCatching {
+        val launch = context.packageManager.getLaunchIntentForPackage(packageName) ?: return
+        launch.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+        context.startActivity(launch)
+    }
 }

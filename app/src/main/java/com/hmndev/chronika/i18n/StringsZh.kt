@@ -288,5 +288,21 @@ internal val ZH_STRINGS: Map<String, String> = mapOf(
     "export.fingerprint" to "指纹：%s",
     "export.mediastore_rejected" to "MediaStore 拒绝了文件 %s",
     "export.no_access" to "无法访问 %s",
-    "export.mkdir_failed" to "无法创建 %s"
+    "export.mkdir_failed" to "无法创建 %s",
+    "filter.archived" to "归档",
+    "journal.mark_all_read" to "全部标为已读",
+    "detail.unarchive" to "取消归档",
+    "detail.archived" to "已归档",
+    "detail.mark_unread" to "标为未读",
+    "detail.mark_read" to "标为已读",
+    "detail.share" to "分享",
+    "detail.open_app" to "打开应用",
+    "settings.import_backup" to "导入备份",
+    "settings.import_backup_desc" to "从「下载」中的 JSON 文件恢复记录",
+    "settings.show_raw" to "默认展开原始数据",
+    "settings.show_raw_desc" to "在详情页中默认展开技术 JSON 区域",
+    "toast.copied" to "已复制到剪贴板",
+    "toast.marked_read" to "所有记录已标为已读",
+    "toast.backup_imported" to "已恢复记录：%d",
+    "toast.import_failed" to "导入错误：%s"
 )

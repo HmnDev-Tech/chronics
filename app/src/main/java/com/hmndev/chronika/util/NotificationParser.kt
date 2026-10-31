@@ -16,7 +16,7 @@ import org.json.JSONObject
 data class ParsedMessage(
     val sender: String,
     val text: String,
-    val time: Long
+    val time: Long,
 )
 
 data class ParsedNotification(
@@ -39,7 +39,7 @@ data class ParsedNotification(
     val isClearable: Boolean,
     val priority: Int,
     val isSilent: Boolean,
-    val fingerprint: String
+    val fingerprint: String,
 ) {
     val messagesJson: String
         get() {
@@ -69,9 +69,12 @@ object NotificationParser {
         "android.picture",
         "android.pictureIcon",
         "android.largeIcon",
+        "android.largeIcon.big",
         "android.icon",
         "android.messages",
+        "android.messages.historic",
         "android.messagingStyleUser",
+        "android.textLines",
         "android.people",
         "android.people.list",
         "android.selfDisplayName",
@@ -85,15 +88,22 @@ object NotificationParser {
     fun parse(context: Context, sbn: StatusBarNotification, dedupe: Boolean): ParsedNotification {
         val notification = sbn.notification
         val extras = notification.extras ?: Bundle()
-        val title = extras.getCharSequence(Notification.EXTRA_TITLE)?.toString().orEmpty()
+        val title = extras.getCharSequence(Notification.EXTRA_TITLE)?.toString()
+            ?.takeIf { it.isNotBlank() }
+            ?: extras.getCharSequence(Notification.EXTRA_TITLE_BIG)?.toString().orEmpty()
         val text = extras.getCharSequence(Notification.EXTRA_TEXT)?.toString().orEmpty()
-        val bigText = extras.getCharSequence(Notification.EXTRA_BIG_TEXT)?.toString().orEmpty()
-        val subText = extras.getCharSequence(Notification.EXTRA_SUB_TEXT)?.toString().orEmpty()
+        val rawBigText = extras.getCharSequence(Notification.EXTRA_BIG_TEXT)?.toString().orEmpty()
+        val bigText = rawBigText.ifBlank { readTextLines(extras) }
+        val subText = extras.getCharSequence(Notification.EXTRA_SUB_TEXT)?.toString()
+            ?.takeIf { it.isNotBlank() }
+            ?: extras.getCharSequence(Notification.EXTRA_SUMMARY_TEXT)?.toString()
+                ?.takeIf { it.isNotBlank() }
+            ?: extras.getCharSequence(Notification.EXTRA_INFO_TEXT)?.toString().orEmpty()
         val conversationTitle =
             extras.getCharSequence(Notification.EXTRA_CONVERSATION_TITLE)?.toString().orEmpty()
         val messages = readMessages(extras)
         val actions = notification.actions
-            ?.mapNotNull { it.title?.toString()?.takeIf { title -> title.isNotBlank() } }
+            ?.mapNotNull { it.title?.toString()?.takeIf { actionTitle -> actionTitle.isNotBlank() } }
             ?: emptyList()
         val channelName = runCatching {
             context.getSystemService(android.app.NotificationManager::class.java)
@@ -101,19 +111,15 @@ object NotificationParser {
         }.getOrNull().orEmpty()
         val images = readImages(context, notification, extras, title, text, bigText, messages)
         val postedAt = sbn.postTime
-        val timeKey = when {
-            messages.isNotEmpty() -> messages.last().time.toString()
-            dedupe -> (postedAt / 60_000L).toString()
-            else -> postedAt.toString()
-        }
-        val fingerprint = Fingerprint.of(
-            sbn.packageName,
-            title,
-            text,
-            bigText,
-            conversationTitle,
-            messages.joinToString("|") { "${it.sender}:${it.text}:${it.time}" },
-            timeKey
+        val fingerprint = computeFingerprint(
+            packageName = sbn.packageName,
+            title = title,
+            text = text,
+            bigText = bigText,
+            conversationTitle = conversationTitle,
+            messages = messages,
+            postedAt = postedAt,
+            dedupe = dedupe
         )
         return ParsedNotification(
             packageName = sbn.packageName,
@@ -139,10 +145,50 @@ object NotificationParser {
         )
     }
 
+    fun computeFingerprint(
+        packageName: String,
+        title: String,
+        text: String,
+        bigText: String,
+        conversationTitle: String,
+        messages: List<ParsedMessage>,
+        postedAt: Long,
+        dedupe: Boolean,
+    ): String {
+        val timeKey = when {
+            messages.isNotEmpty() -> messages.last().time.toString()
+            dedupe -> (postedAt / 60_000L).toString()
+            else -> postedAt.toString()
+        }
+        return Fingerprint.of(
+            packageName,
+            title,
+            text,
+            bigText,
+            conversationTitle,
+            messages.joinToString("|") { "${it.sender}:${it.text}:${it.time}" },
+            timeKey
+        )
+    }
+
+    private fun readTextLines(extras: Bundle): String {
+        val lines = runCatching { extras.getCharSequenceArray(Notification.EXTRA_TEXT_LINES) }.getOrNull()
+            ?: return ""
+        return lines.mapNotNull { it?.toString()?.trim()?.takeIf { line -> line.isNotEmpty() } }
+            .joinToString("\n")
+    }
+
+    @Suppress("DEPRECATION")
     private fun readMessages(extras: Bundle): List<ParsedMessage> {
-        val raw = extras.getParcelableArray(Notification.EXTRA_MESSAGES) ?: return emptyList()
+        val historic = runCatching { extras.getParcelableArray("android.messages.historic") }.getOrNull()
+        val current = runCatching { extras.getParcelableArray(Notification.EXTRA_MESSAGES) }.getOrNull()
+        if (historic == null && current == null) return emptyList()
         val result = ArrayList<ParsedMessage>()
-        raw.forEach { item ->
+        val combined = buildList {
+            historic?.let { addAll(it) }
+            current?.let { addAll(it) }
+        }
+        combined.forEach { item ->
             val bundle = item as? Bundle ?: return@forEach
             val sender = bundle.getCharSequence("sender")?.toString()
                 ?: senderFromPerson(bundle)
@@ -177,7 +223,7 @@ object NotificationParser {
         title: String,
         text: String,
         bigText: String,
-        messages: List<ParsedMessage>
+        messages: List<ParsedMessage>,
     ): List<Bitmap> {
         val result = ArrayList<Bitmap>()
 
@@ -238,9 +284,10 @@ object NotificationParser {
         title: String,
         text: String,
         bigText: String,
-        messages: List<ParsedMessage>
+        messages: List<ParsedMessage>,
     ): Boolean {
-        val candidates = ArrayList<String>(messages.size + 2)
+        val candidates = ArrayList<String>(messages.size + 3)
+        if (title.isNotBlank()) candidates.add(title)
         if (text.isNotBlank()) candidates.add(text)
         if (bigText.isNotBlank()) candidates.add(bigText)
         messages.forEach { if (it.text.isNotBlank()) candidates.add(it.text) }
@@ -254,7 +301,7 @@ object NotificationParser {
     private fun extractLargeIconBitmap(
         context: Context,
         notification: Notification,
-        extras: Bundle
+        extras: Bundle,
     ): Bitmap? {
         runCatching {
             val drawable = notification.getLargeIcon()?.loadDrawable(context)
@@ -291,6 +338,7 @@ object NotificationParser {
         return null
     }
 
+    @Suppress("DEPRECATION")
     private fun collectAvatarBitmaps(context: Context, extras: Bundle): List<Bitmap> {
         val avatars = ArrayList<Bitmap>()
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
@@ -343,10 +391,11 @@ object NotificationParser {
         }.getOrDefault(false)
     }
 
+    @Suppress("DEPRECATION")
     private fun readMessageAttachments(
         context: Context,
         extras: Bundle,
-        result: MutableList<Bitmap>
+        result: MutableList<Bitmap>,
     ) {
         val bundles = ArrayList<Bundle>()
         extras.getParcelableArray(Notification.EXTRA_MESSAGES)?.forEach {
@@ -369,7 +418,6 @@ object NotificationParser {
                     }
                 }
             }
-            @Suppress("DEPRECATION")
             runCatching {
                 (bundle.getParcelable<Bitmap>("image") ?: bundle.getParcelable<Bitmap>("picture"))
                     ?.let { result.add(it) }

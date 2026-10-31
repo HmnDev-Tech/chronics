@@ -288,5 +288,21 @@ internal val PT_STRINGS: Map<String, String> = mapOf(
     "export.fingerprint" to "Impressão digital: %s",
     "export.mediastore_rejected" to "O MediaStore rejeitou o arquivo %s",
     "export.no_access" to "Sem acesso a %s",
-    "export.mkdir_failed" to "Não foi possível criar %s"
+    "export.mkdir_failed" to "Não foi possível criar %s",
+    "filter.archived" to "Arquivo",
+    "journal.mark_all_read" to "Marcar tudo lido",
+    "detail.unarchive" to "Restaurar",
+    "detail.archived" to "arquivado",
+    "detail.mark_unread" to "Marcar como não lido",
+    "detail.mark_read" to "Marcar como lido",
+    "detail.share" to "Compartilhar",
+    "detail.open_app" to "Abrir app",
+    "settings.import_backup" to "Importar backup",
+    "settings.import_backup_desc" to "Restaurar registros de um arquivo JSON em Downloads",
+    "settings.show_raw" to "Expandir dados brutos por padrão",
+    "settings.show_raw_desc" to "Abrir a seção técnica JSON nos detalhes do registro",
+    "toast.copied" to "Copiado para a área de transferência",
+    "toast.marked_read" to "Todos os registros marcados como lidos",
+    "toast.backup_imported" to "Registros restaurados: %d",
+    "toast.import_failed" to "Erro de importação: %s"
 )

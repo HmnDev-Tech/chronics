@@ -33,8 +33,9 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.hmndev.chronika.data.JournalEntry
-import com.hmndev.chronika.ui.theme.Lime
 import com.hmndev.chronika.i18n.S
+import com.hmndev.chronika.ui.LocalDeviceProfile
+import com.hmndev.chronika.ui.theme.Lime
 import com.hmndev.chronika.util.EntryFormat
 import com.hmndev.chronika.util.TextTools
 import com.hmndev.chronika.util.TimeTools
@@ -45,18 +46,26 @@ fun TimelineEntry(
     index: Int,
     onClick: (JournalEntry) -> Unit,
     onPin: (JournalEntry) -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    compact: Boolean = false,
 ) {
     val scheme = MaterialTheme.colorScheme
+    val device = LocalDeviceProfile.current
     val interaction = remember(entry.id) { MutableInteractionSource() }
-    val offset = when (index % 5) {
-        2 -> 8.dp
-        4 -> 4.dp
-        else -> 0.dp
+    val offset = if (compact) {
+        0.dp
+    } else {
+        when (index % 5) {
+            2 -> 8.dp
+            4 -> 4.dp
+            else -> 0.dp
+        }
     }
-    Row(modifier = modifier.fillMaxWidth().padding(horizontal = 18.dp)) {
+    Row(modifier = modifier.fillMaxWidth().padding(horizontal = device.screenPadding)) {
         Column(
-            modifier = Modifier.width(52.dp).padding(top = 10.dp),
+            modifier = Modifier
+                .width(if (compact) 46.dp else 52.dp)
+                .padding(top = if (compact) 7.dp else 10.dp),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
             Text(
@@ -64,31 +73,31 @@ fun TimelineEntry(
                 style = MaterialTheme.typography.labelSmall,
                 color = if (entry.isRead) scheme.onSurfaceVariant else scheme.primary
             )
-            Spacer(Modifier.height(7.dp))
+            Spacer(Modifier.height(if (compact) 5.dp else 7.dp))
             Box(
                 Modifier
-                    .size(9.dp)
+                    .size(if (compact) 7.dp else 9.dp)
                     .clip(CircleShape)
                     .background(if (entry.isPinned) Lime else scheme.primary.copy(alpha = 0.55f))
             )
             Box(
                 Modifier
                     .width(1.dp)
-                    .height(72.dp)
+                    .height(if (compact) 44.dp else 72.dp)
                     .background(scheme.outlineVariant.copy(alpha = 0.7f))
             )
         }
-        Spacer(Modifier.width(10.dp))
+        Spacer(Modifier.width(if (compact) 8.dp else 10.dp))
         Surface(
             modifier = Modifier
                 .weight(1f)
-                .padding(bottom = 10.dp, start = offset)
+                .padding(bottom = if (compact) 6.dp else 10.dp, start = offset)
                 .pressScale(interaction)
                 .clickable(
                     interactionSource = interaction,
                     indication = null
                 ) { onClick(entry) },
-            shape = RoundedCornerShape(28.dp),
+            shape = RoundedCornerShape(if (compact) 22.dp else 28.dp),
             color = if (entry.isPinned) {
                 scheme.primaryContainer.copy(alpha = 0.72f)
             } else {
@@ -101,9 +110,9 @@ fun TimelineEntry(
                 if (entry.isPinned) {
                     Box(
                         Modifier
-                            .padding(start = 0.dp, top = 18.dp, bottom = 18.dp)
+                            .padding(start = 0.dp, top = 14.dp, bottom = 14.dp)
                             .width(4.dp)
-                            .height(48.dp)
+                            .height(if (compact) 32.dp else 48.dp)
                             .clip(
                                 RoundedCornerShape(
                                     topStart = 0.dp,
@@ -116,18 +125,29 @@ fun TimelineEntry(
                             .align(Alignment.CenterStart)
                     )
                 }
-                Column(Modifier.padding(start = 14.dp, end = 8.dp, top = 12.dp, bottom = 13.dp)) {
+                Column(
+                    Modifier.padding(
+                        start = if (compact) 12.dp else 14.dp,
+                        end = 8.dp,
+                        top = if (compact) 8.dp else 12.dp,
+                        bottom = if (compact) 9.dp else 13.dp
+                    )
+                ) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         AppIcon(
                             packageName = entry.packageName,
                             label = entry.appLabel,
-                            size = 38.dp
+                            size = if (compact) 30.dp else 38.dp
                         )
-                        Spacer(Modifier.width(10.dp))
+                        Spacer(Modifier.width(if (compact) 8.dp else 10.dp))
                         Column(Modifier.weight(1f)) {
                             Text(
                                 text = entry.displayTitle.ifBlank { entry.appLabel },
-                                style = MaterialTheme.typography.titleMedium,
+                                style = if (compact) {
+                                    MaterialTheme.typography.titleSmall
+                                } else {
+                                    MaterialTheme.typography.titleMedium
+                                },
                                 fontWeight = FontWeight.Bold,
                                 maxLines = 1,
                                 overflow = TextOverflow.Ellipsis,
@@ -147,27 +167,39 @@ fun TimelineEntry(
                         }
                         IconButton(
                             onClick = { onPin(entry) },
-                            modifier = Modifier.size(32.dp)
+                            modifier = Modifier.size(if (compact) 28.dp else 32.dp)
                         ) {
                             Icon(
                                 imageVector = Icons.Rounded.PushPin,
                                 contentDescription = if (entry.isPinned) S["common.unpin"] else S["common.pin"],
-                                modifier = Modifier.size(16.dp),
+                                modifier = Modifier.size(if (compact) 14.dp else 16.dp),
                                 tint = if (entry.isPinned) scheme.primary else scheme.outline
                             )
                         }
                     }
                     if (entry.displayBody.isNotBlank()) {
-                        Spacer(Modifier.height(7.dp))
+                        Spacer(Modifier.height(if (compact) 4.dp else 7.dp))
                         Text(
-                            text = TextTools.compactPreview(entry.displayBody, 220),
-                            style = MaterialTheme.typography.bodyMedium,
+                            text = TextTools.compactPreview(entry.displayBody, if (compact) 140 else 220),
+                            style = if (compact) {
+                                MaterialTheme.typography.bodySmall
+                            } else {
+                                MaterialTheme.typography.bodyMedium
+                            },
                             color = scheme.onSurfaceVariant,
-                            maxLines = if (entry.hasMessages) 2 else 3,
+                            maxLines = when {
+                                compact -> 2
+                                entry.hasMessages -> 2
+                                else -> 3
+                            },
                             overflow = TextOverflow.Ellipsis
                         )
                     }
-                    val messages = if (entry.hasMessages) EntryFormat.messages(entry).takeLast(2) else emptyList()
+                    val messages = if (!compact && entry.hasMessages) {
+                        EntryFormat.messages(entry).takeLast(2)
+                    } else {
+                        emptyList()
+                    }
                     if (messages.isNotEmpty()) {
                         Spacer(Modifier.height(7.dp))
                         Column(verticalArrangement = Arrangement.spacedBy(3.dp)) {
@@ -195,7 +227,7 @@ fun TimelineEntry(
                             }
                         }
                     }
-                    Spacer(Modifier.height(9.dp))
+                    Spacer(Modifier.height(if (compact) 6.dp else 9.dp))
                     Row(
                         horizontalArrangement = Arrangement.spacedBy(6.dp),
                         verticalAlignment = Alignment.CenterVertically
@@ -206,11 +238,26 @@ fun TimelineEntry(
                             container = scheme.surfaceContainerHigh,
                             content = scheme.onSurfaceVariant
                         )
-                        if (entry.isOngoing) {
-                            MetaPill(text = S["timeline.ongoing"], container = scheme.tertiaryContainer, content = scheme.onTertiaryContainer)
+                        if (entry.isArchived) {
+                            MetaPill(
+                                text = S["detail.archived"],
+                                container = scheme.secondaryContainer,
+                                content = scheme.onSecondaryContainer
+                            )
                         }
-                        if (entry.isSilent) {
-                            MetaPill(text = S["timeline.silent"], container = scheme.surfaceContainerHighest, content = scheme.onSurfaceVariant)
+                        if (entry.isOngoing) {
+                            MetaPill(
+                                text = S["timeline.ongoing"],
+                                container = scheme.tertiaryContainer,
+                                content = scheme.onTertiaryContainer
+                            )
+                        }
+                        if (entry.isSilent && !compact) {
+                            MetaPill(
+                                text = S["timeline.silent"],
+                                container = scheme.surfaceContainerHighest,
+                                content = scheme.onSurfaceVariant
+                            )
                         }
                         if (entry.exportPath.isNotBlank()) {
                             MetaPill(

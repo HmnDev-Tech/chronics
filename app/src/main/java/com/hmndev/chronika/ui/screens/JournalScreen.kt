@@ -16,13 +16,17 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Close
+import androidx.compose.material.icons.rounded.DoneAll
 import androidx.compose.material.icons.rounded.NotificationsOff
 import androidx.compose.material.icons.rounded.PushPin
 import androidx.compose.material.icons.rounded.Search
+import androidx.compose.material3.AssistChip
+import androidx.compose.material3.FilterChip
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -42,6 +46,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import com.hmndev.chronika.data.AppCount
 import com.hmndev.chronika.data.AppSettings
 import com.hmndev.chronika.data.JournalEntry
 import com.hmndev.chronika.data.JournalStats
@@ -68,27 +73,59 @@ fun JournalScreen(
     access: AccessState,
     onOpenEntry: (JournalEntry) -> Unit,
     onPin: (JournalEntry) -> Unit,
+    onMarkAllRead: () -> Unit = {},
     onOpenSettings: () -> Unit,
     onTest: () -> Unit,
-    onOpenInsights: () -> Unit
+    onOpenInsights: () -> Unit,
 ) {
     val device = LocalDeviceProfile.current
     var query by rememberSaveable { mutableStateOf("") }
-    var filter by remember { mutableStateOf(JournalFilter.ALL) }
+    var filterName by rememberSaveable { mutableStateOf(JournalFilter.ALL.name) }
+    var selectedPackage by rememberSaveable { mutableStateOf("") }
+    val filter = JournalFilter.entries.firstOrNull { it.name == filterName } ?: JournalFilter.ALL
 
-    val filtered = remember(entries, query, filter) {
+    val scopeEntries = remember(entries, filter) {
         entries.filter { entry ->
-            val matchesFilter = when (filter) {
-                JournalFilter.ALL -> true
-                JournalFilter.IMPORTANT -> entry.priority >= 1 || !entry.isRead
-                JournalFilter.PINNED -> entry.isPinned
+            when (filter) {
+                JournalFilter.ALL -> !entry.isArchived
+                JournalFilter.IMPORTANT -> !entry.isArchived && (entry.priority >= 1 || !entry.isRead)
+                JournalFilter.PINNED -> !entry.isArchived && entry.isPinned
+                JournalFilter.ARCHIVED -> entry.isArchived
             }
-            val matchesQuery = query.isBlank() ||
-                EntryFormat.searchText(entry).contains(query, ignoreCase = true)
-            matchesFilter && matchesQuery
         }
     }
-    val pinned = remember(entries) { entries.filter { it.isPinned } }
+
+    val appOptions = remember(scopeEntries) {
+        scopeEntries
+            .groupBy { it.packageName }
+            .map { (pkg, list) ->
+                AppCount(
+                    packageName = pkg,
+                    appLabel = list.first().appLabel.ifBlank { pkg },
+                    count = list.size
+                )
+            }
+            .sortedByDescending { it.count }
+    }
+
+    val activePackage = if (appOptions.any { it.packageName == selectedPackage }) {
+        selectedPackage
+    } else {
+        ""
+    }
+
+    val filtered = remember(scopeEntries, query, activePackage) {
+        scopeEntries.filter { entry ->
+            val matchesPackage = activePackage.isBlank() || entry.packageName == activePackage
+            val matchesQuery = query.isBlank() ||
+                EntryFormat.searchText(entry).contains(query, ignoreCase = true)
+            matchesPackage && matchesQuery
+        }
+    }
+
+    val pinned = remember(entries) {
+        entries.filter { it.isPinned && !it.isArchived }
+    }
     val groups = remember(filtered) {
         filtered.groupBy { TimeTools.dayKey(it.postedAt) }
     }
@@ -106,7 +143,7 @@ fun JournalScreen(
                 Spacer(Modifier.height(14.dp))
                 FilterLens(
                     selected = filter,
-                    onSelected = { filter = it }
+                    onSelected = { filterName = it.name }
                 )
                 Spacer(Modifier.height(10.dp))
                 OutlinedTextField(
@@ -135,6 +172,57 @@ fun JournalScreen(
             }
         }
 
+        if (appOptions.size > 1 || stats.unread > 0) {
+            item(key = "quickChips") {
+                LazyRow(
+                    contentPadding = PaddingValues(horizontal = device.screenPadding),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    if (stats.unread > 0) {
+                        item(key = "markAllRead") {
+                            AssistChip(
+                                onClick = onMarkAllRead,
+                                label = { Text("${S["journal.mark_all_read"]} (${stats.unread})") },
+                                leadingIcon = {
+                                    Icon(
+                                        imageVector = Icons.Rounded.DoneAll,
+                                        contentDescription = null,
+                                        modifier = Modifier.size(16.dp)
+                                    )
+                                },
+                                shape = CircleShape
+                            )
+                        }
+                    }
+                    if (appOptions.size > 1) {
+                        item(key = "app-all") {
+                            FilterChip(
+                                selected = activePackage.isBlank(),
+                                onClick = { selectedPackage = "" },
+                                label = { Text("${S["filter.all"]} · ${scopeEntries.size}") },
+                                shape = CircleShape
+                            )
+                        }
+                        items(appOptions, key = { "app-${it.packageName}" }) { app ->
+                            FilterChip(
+                                selected = activePackage == app.packageName,
+                                onClick = {
+                                    selectedPackage = if (activePackage == app.packageName) {
+                                        ""
+                                    } else {
+                                        app.packageName
+                                    }
+                                },
+                                label = { Text("${app.appLabel} · ${app.count}") },
+                                shape = CircleShape
+                            )
+                        }
+                    }
+                }
+            }
+        }
+
         if (!access.listener || !settings.captureEnabled) {
             item(key = "captureBanner") {
                 CaptureBanner(
@@ -145,7 +233,7 @@ fun JournalScreen(
             }
         }
 
-        if (pinned.isNotEmpty()) {
+        if (pinned.isNotEmpty() && filter != JournalFilter.ARCHIVED) {
             item(key = "pinnedHeading") {
                 Column(Modifier.padding(horizontal = device.screenPadding)) {
                     Spacer(Modifier.height(12.dp))
@@ -157,19 +245,21 @@ fun JournalScreen(
                 }
             }
             item(key = "pinnedRow") {
-                LazyRow(
-                    contentPadding = PaddingValues(horizontal = device.screenPadding),
-                    horizontalArrangement = Arrangement.spacedBy(10.dp)
-                ) {
-                    items(pinned, key = { "pin-${it.id}" }) { entry ->
-                        PinnedMiniCard(
-                            entry = entry,
-                            onClick = { onOpenEntry(entry) },
-                            onPin = { onPin(entry) }
-                        )
+                Column {
+                    LazyRow(
+                        contentPadding = PaddingValues(horizontal = device.screenPadding),
+                        horizontalArrangement = Arrangement.spacedBy(10.dp)
+                    ) {
+                        items(pinned, key = { "pin-${it.id}" }) { entry ->
+                            PinnedMiniCard(
+                                entry = entry,
+                                onClick = { onOpenEntry(entry) },
+                                onPin = { onPin(entry) }
+                            )
+                        }
                     }
+                    Spacer(Modifier.height(20.dp))
                 }
-                Spacer(Modifier.height(20.dp))
             }
         }
 
@@ -208,12 +298,13 @@ fun JournalScreen(
                     count = dayEntries.size
                 )
             }
-            items(dayEntries, key = { it.id }) { entry ->
+            itemsIndexed(dayEntries, key = { _, it -> it.id }) { index, entry ->
                 TimelineEntry(
                     entry = entry,
-                    index = dayEntries.indexOf(entry),
+                    index = index,
                     onClick = onOpenEntry,
-                    onPin = onPin
+                    onPin = onPin,
+                    compact = settings.compact
                 )
             }
         }
@@ -226,7 +317,12 @@ private fun DayHeader(label: String, count: Int) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(start = device.screenPadding, end = device.screenPadding, top = device.dp(18.dp), bottom = device.dp(8.dp)),
+            .padding(
+                start = device.screenPadding,
+                end = device.screenPadding,
+                top = device.dp(18.dp),
+                bottom = device.dp(8.dp)
+            ),
         verticalAlignment = Alignment.CenterVertically
     ) {
         Text(
@@ -255,7 +351,7 @@ private fun DayHeader(label: String, count: Int) {
 private fun CaptureBanner(
     listener: Boolean,
     enabled: Boolean,
-    onOpenSettings: () -> Unit
+    onOpenSettings: () -> Unit,
 ) {
     val device = LocalDeviceProfile.current
     Surface(
@@ -302,7 +398,7 @@ private fun CaptureBanner(
 private fun PinnedMiniCard(
     entry: JournalEntry,
     onClick: () -> Unit,
-    onPin: () -> Unit
+    onPin: () -> Unit,
 ) {
     val device = LocalDeviceProfile.current
     Surface(

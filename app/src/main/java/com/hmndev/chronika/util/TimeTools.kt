@@ -48,7 +48,7 @@ object TimeTools {
             .atStartOfDay(zone).toInstant().toEpochMilli()
 
     fun relative(millis: Long): String {
-        val diff = System.currentTimeMillis() - millis
+        val diff = (System.currentTimeMillis() - millis).coerceAtLeast(0L)
         return when {
             diff < 60_000 -> S["time.just_now"]
             diff < 3_600_000 -> S.f("time.minutes_ago", diff / 60_000)

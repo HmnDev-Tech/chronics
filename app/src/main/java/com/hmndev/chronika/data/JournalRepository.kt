@@ -18,6 +18,12 @@ class JournalRepository(context: Context) {
         JournalStore.changed()
     }
 
+    fun markAllRead(): Int {
+        val count = db.markAllRead()
+        if (count > 0) JournalStore.changed()
+        return count
+    }
+
     fun togglePinned(entry: JournalEntry) {
         db.setPinned(entry.id, !entry.isPinned)
         JournalStore.changed()
@@ -39,7 +45,8 @@ class JournalRepository(context: Context) {
     }
 
     fun cleanup(settings: AppSettings) {
-        db.cleanup(settings.retentionDays, settings.maxEntries)
+        val removed = db.cleanup(settings.retentionDays, settings.maxEntries)
+        if (removed > 0) JournalStore.changed()
     }
 
     fun findById(id: Long): JournalEntry? = db.findById(id)
@@ -48,6 +55,12 @@ class JournalRepository(context: Context) {
         val id = db.insert(entry)
         if (id > 0) JournalStore.changed()
         return id
+    }
+
+    fun importEntries(entries: List<JournalEntry>): Int {
+        val count = db.insertBatch(entries)
+        if (count > 0) JournalStore.changed()
+        return count
     }
 
     fun findByFingerprint(fingerprint: String): JournalEntry? = db.findByFingerprint(fingerprint)
@@ -62,13 +75,18 @@ class JournalRepository(context: Context) {
             text = entry.text,
             bigText = entry.bigText,
             subText = entry.subText,
+            category = entry.category,
+            channelId = entry.channelId,
+            channelName = entry.channelName,
+            groupKey = entry.groupKey,
             conversationTitle = entry.conversationTitle,
             messagesJson = entry.messagesJson,
             actionsJson = entry.actionsJson,
             extrasJson = entry.extrasJson,
             imagePaths = entry.imagePaths,
-            channelName = entry.channelName,
-            capturedAt = entry.capturedAt
+            source = entry.source,
+            capturedAt = entry.capturedAt,
+            fingerprint = entry.fingerprint
         )
         JournalStore.changed()
     }

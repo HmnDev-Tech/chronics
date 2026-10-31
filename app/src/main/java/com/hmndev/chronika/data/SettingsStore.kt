@@ -2,6 +2,8 @@ package com.hmndev.chronika.data
 
 import android.content.Context
 import android.content.SharedPreferences
+import com.hmndev.chronika.i18n.AppLanguage
+import com.hmndev.chronika.i18n.S
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -12,13 +14,24 @@ object SettingsStore {
     private val _settings = MutableStateFlow(AppSettings())
     val settings: StateFlow<AppSettings> = _settings.asStateFlow()
 
+    // Hold a strong reference so SharedPreferences' WeakHashMap does not GC the listener.
+    private val preferenceChangeListener =
+        SharedPreferences.OnSharedPreferenceChangeListener { _, key ->
+            val next = load()
+            _settings.value = next
+            if (key == "language") {
+                S.setLanguage(AppLanguage.resolve(next.language))
+            }
+        }
+
+    @Synchronized
     fun init(context: Context) {
         if (::prefs.isInitialized) return
         prefs = context.applicationContext.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
-        _settings.value = load()
-        prefs.registerOnSharedPreferenceChangeListener { _, _ ->
-            _settings.value = load()
-        }
+        val initial = load()
+        _settings.value = initial
+        S.setLanguage(AppLanguage.resolve(initial.language))
+        prefs.registerOnSharedPreferenceChangeListener(preferenceChangeListener)
     }
 
     fun current(): AppSettings {
@@ -26,8 +39,18 @@ object SettingsStore {
         return _settings.value
     }
 
+    @Synchronized
     fun update(transform: (AppSettings) -> AppSettings) {
-        val next = transform(_settings.value)
+        val rawNext = transform(_settings.value)
+        val next = rawNext.copy(
+            folderName = AppSettings.sanitizeFolder(rawNext.folderName),
+            maxEntries = rawNext.maxEntries.coerceIn(500, 200000),
+            retentionDays = rawNext.retentionDays.coerceIn(0, 365),
+            uiScale = rawNext.uiScale.coerceIn(0.85f, 1.15f),
+            excludedApps = rawNext.excludedApps.toSet()
+        )
+        _settings.value = next
+        if (!::prefs.isInitialized) return
         prefs.edit().apply {
             putBoolean("onboardingDone", next.onboardingDone)
             putBoolean("captureEnabled", next.captureEnabled)
@@ -47,7 +70,7 @@ object SettingsStore {
             putInt("maxEntries", next.maxEntries)
             putString("folderName", next.folderName)
             putBoolean("maskSecrets", next.maskSecrets)
-            putStringSet("excludedApps", next.excludedApps)
+            putStringSet("excludedApps", HashSet(next.excludedApps))
             putBoolean("includedOnly", next.includedOnly)
             putString("excludedKeywords", next.excludedKeywords)
             putString("requiredKeywords", next.requiredKeywords)
@@ -60,7 +83,6 @@ object SettingsStore {
             putFloat("uiScale", next.uiScale)
             apply()
         }
-        _settings.value = next
     }
 
     private fun load(): AppSettings {
@@ -80,12 +102,9 @@ object SettingsStore {
             ignoreSilent = prefs.getBoolean("ignoreSilent", defaults.ignoreSilent),
             dedupe = prefs.getBoolean("dedupe", defaults.dedupe),
             minPriority = prefs.getInt("minPriority", defaults.minPriority),
-            retentionDays = prefs.getInt("retentionDays", defaults.retentionDays),
-            maxEntries = prefs.getInt("maxEntries", defaults.maxEntries),
-            folderName = prefs.getString("folderName", defaults.folderName)
-                .orEmpty()
-                .ifBlank { defaults.folderName }
-                .let { if (it == "Chronika") defaults.folderName else it },
+            retentionDays = prefs.getInt("retentionDays", defaults.retentionDays).coerceIn(0, 365),
+            maxEntries = prefs.getInt("maxEntries", defaults.maxEntries).coerceIn(500, 200000),
+            folderName = AppSettings.sanitizeFolder(prefs.getString("folderName", defaults.folderName)),
             maskSecrets = prefs.getBoolean("maskSecrets", defaults.maskSecrets),
             excludedApps = prefs.getStringSet("excludedApps", defaults.excludedApps)?.toSet() ?: emptySet(),
             includedOnly = prefs.getBoolean("includedOnly", defaults.includedOnly),

@@ -3,7 +3,6 @@ package com.hmndev.chronika.ui.screens
 import android.app.Activity
 import android.content.Context
 import android.content.ContextWrapper
-
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -13,7 +12,6 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.rememberScrollState
@@ -28,25 +26,26 @@ import androidx.compose.material.icons.rounded.AutoAwesome
 import androidx.compose.material.icons.rounded.Bolt
 import androidx.compose.material.icons.rounded.CleaningServices
 import androidx.compose.material.icons.rounded.CloudDownload
+import androidx.compose.material.icons.rounded.Code
 import androidx.compose.material.icons.rounded.ColorLens
 import androidx.compose.material.icons.rounded.DeleteForever
 import androidx.compose.material.icons.rounded.Download
 import androidx.compose.material.icons.rounded.Folder
 import androidx.compose.material.icons.rounded.Key
 import androidx.compose.material.icons.rounded.NotificationsActive
+import androidx.compose.material.icons.rounded.RestorePage
 import androidx.compose.material.icons.rounded.Security
 import androidx.compose.material.icons.rounded.Storage
 import androidx.compose.material.icons.rounded.Terminal
 import androidx.compose.material.icons.rounded.Tune
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
-import androidx.compose.material3.FilterChip
 import androidx.compose.material3.FilledTonalButton
+import androidx.compose.material3.FilterChip
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Slider
-import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -67,6 +66,7 @@ import com.hmndev.chronika.BuildConfig
 import com.hmndev.chronika.data.AppSettings
 import com.hmndev.chronika.i18n.AppLanguage
 import com.hmndev.chronika.i18n.S
+import com.hmndev.chronika.service.CaptureEngine
 import com.hmndev.chronika.shizuku.ShizukuManager
 import com.hmndev.chronika.ui.LocalDeviceProfile
 import com.hmndev.chronika.ui.ScreenClass
@@ -96,8 +96,9 @@ fun SettingsScreen(
     onImportShizuku: () -> Unit,
     onTest: () -> Unit,
     onExportAll: () -> Unit,
+    onImportBackup: () -> Unit = {},
     onDeleteAll: () -> Unit,
-    onOpenUrl: (String) -> Unit
+    onOpenUrl: (String) -> Unit,
 ) {
     val scheme = MaterialTheme.colorScheme
     val device = LocalDeviceProfile.current
@@ -376,13 +377,13 @@ fun SettingsScreen(
                 OutlinedTextField(
                     value = settings.folderName,
                     onValueChange = { value ->
-                        onUpdate { it.copy(folderName = value.replace("/", "_").take(48)) }
+                        onUpdate { it.copy(folderName = AppSettings.sanitizeFolder(value)) }
                     },
                     modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp),
                     label = { Text(S["settings.folder"]) },
                     leadingIcon = { Icon(Icons.Rounded.Folder, contentDescription = null) },
                     supportingText = {
-                        Text(S.f("settings.downloads_path", settings.folderName.ifBlank { "Chronics" }))
+                        Text(S.f("settings.downloads_path", settings.safeFolderName))
                     },
                     singleLine = true,
                     shape = MaterialTheme.shapes.medium
@@ -448,6 +449,13 @@ fun SettingsScreen(
                 )
                 SettingsGroupDivider()
                 SettingAction(
+                    title = S["settings.import_backup"],
+                    description = S["settings.import_backup_desc"],
+                    icon = Icons.Rounded.RestorePage,
+                    onClick = onImportBackup
+                )
+                SettingsGroupDivider()
+                SettingAction(
                     title = S["settings.clear_journal"],
                     description = S["settings.clear_journal_desc"],
                     icon = Icons.Rounded.DeleteForever,
@@ -504,6 +512,14 @@ fun SettingsScreen(
                     icon = Icons.Rounded.Tune
                 )
                 SettingsGroupDivider()
+                SettingSwitch(
+                    title = S["settings.show_raw"],
+                    description = S["settings.show_raw_desc"],
+                    checked = settings.showRawPayload,
+                    onCheckedChange = { value -> onUpdate { it.copy(showRawPayload = value) } },
+                    icon = Icons.Rounded.Code
+                )
+                SettingsGroupDivider()
                 SettingAction(
                     title = S["settings.test"],
                     description = S["settings.test_desc"],
@@ -530,6 +546,8 @@ fun SettingsScreen(
                                 onClick = {
                                     onUpdate { it.copy(language = language.code) }
                                     S.setLanguage(language)
+                                    CaptureEngine.clearLabelCache()
+                                    ShizukuManager.refresh()
                                     context.findActivity()?.recreate()
                                 },
                                 label = { Text(S[language.labelKey]) }
@@ -639,7 +657,7 @@ fun SettingsScreen(
                 )
                 SettingsGroupDivider()
                 Text(
-                    text = S.f("settings.privacy_note", settings.folderName.ifBlank { "Chronics" }),
+                    text = S.f("settings.privacy_note", settings.safeFolderName),
                     style = MaterialTheme.typography.bodySmall,
                     color = scheme.onSurfaceVariant,
                     modifier = Modifier.padding(16.dp)
@@ -675,7 +693,7 @@ private fun AccessRow(
     title: String,
     description: String,
     granted: Boolean,
-    onClick: () -> Unit
+    onClick: () -> Unit,
 ) {
     Row(
         modifier = Modifier

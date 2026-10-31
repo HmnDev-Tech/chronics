@@ -4,6 +4,7 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.size
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.rounded.Archive
 import androidx.compose.material.icons.rounded.Bolt
 import androidx.compose.material.icons.rounded.Inbox
 import androidx.compose.material.icons.rounded.MoreHoriz
@@ -19,14 +20,15 @@ import com.hmndev.chronika.i18n.S
 enum class JournalFilter(val labelKey: String, val icon: ImageVector) {
     ALL("filter.all", Icons.Rounded.Inbox),
     IMPORTANT("filter.important", Icons.Rounded.Bolt),
-    PINNED("filter.pinned", Icons.Rounded.PushPin)
+    PINNED("filter.pinned", Icons.Rounded.PushPin),
+    ARCHIVED("filter.archived", Icons.Rounded.Archive),
 }
 
 @Composable
 fun FilterLens(
     selected: JournalFilter,
     onSelected: (JournalFilter) -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
 ) {
     ButtonGroup(
         overflowIndicator = { _ ->

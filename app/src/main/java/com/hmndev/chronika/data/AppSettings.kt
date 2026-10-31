@@ -49,4 +49,24 @@ data class AppSettings(
         if (required.isNotEmpty() && required.none { hay.contains(it) }) return false
         return true
     }
+
+    companion object {
+        const val DEFAULT_FOLDER = "Chronics"
+
+        fun sanitizeFolder(raw: String?): String {
+            val cleaned = raw.orEmpty()
+                .replace("..", "")
+                .replace('\\', '_')
+                .replace('/', '_')
+                .replace(Regex("[^A-Za-z0-9._ -]"), "_")
+                .trim { it.isWhitespace() || it == '.' || it == '_' }
+                .take(48)
+                .trim { it.isWhitespace() || it == '.' }
+            return when {
+                cleaned.isBlank() -> DEFAULT_FOLDER
+                cleaned == "Chronika" -> DEFAULT_FOLDER
+                else -> cleaned
+            }
+        }
+    }
 }

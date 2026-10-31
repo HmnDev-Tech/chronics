@@ -288,5 +288,21 @@ internal val KK_STRINGS: Map<String, String> = mapOf(
     "export.fingerprint" to "Саусақ ізі: %s",
     "export.mediastore_rejected" to "MediaStore %s файлын қабылдамады",
     "export.no_access" to "%s қалтасына рұқсат жоқ",
-    "export.mkdir_failed" to "%s қалтасын құру мүмкін болмады"
+    "export.mkdir_failed" to "%s қалтасын құру мүмкін болмады",
+    "filter.archived" to "Мұрағат",
+    "journal.mark_all_read" to "Бәрін оқылды деу",
+    "detail.unarchive" to "Мұрағаттан қайтару",
+    "detail.archived" to "мұрағатта",
+    "detail.mark_unread" to "Оқылмаған деп белгілеу",
+    "detail.mark_read" to "Оқылды деп белгілеу",
+    "detail.share" to "Бөлісу",
+    "detail.open_app" to "Қосымшаны ашу",
+    "settings.import_backup" to "Сақтық көшірмені импорттау",
+    "settings.import_backup_desc" to "Downloads ішіндегі JSON файлынан жазбаларды қалпына келтіру",
+    "settings.show_raw" to "Шикі деректерді бірден ашу",
+    "settings.show_raw_desc" to "Жазба экранында JSON блогын бірден көрсету",
+    "toast.copied" to "Алмасу буферіне көшірілді",
+    "toast.marked_read" to "Барлық жазбалар оқылды деп белгіленді",
+    "toast.backup_imported" to "Қалпына келтірілген жазбалар: %d",
+    "toast.import_failed" to "Импорт қатесі: %s"
 )

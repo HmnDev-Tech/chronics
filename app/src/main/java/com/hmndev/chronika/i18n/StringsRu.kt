@@ -288,5 +288,21 @@ internal val RU_STRINGS: Map<String, String> = mapOf(
     "export.fingerprint" to "Отпечаток: %s",
     "export.mediastore_rejected" to "MediaStore отклонил файл %s",
     "export.no_access" to "Нет доступа к %s",
-    "export.mkdir_failed" to "Не удалось создать %s"
+    "export.mkdir_failed" to "Не удалось создать %s",
+    "filter.archived" to "Архив",
+    "journal.mark_all_read" to "Прочитать все",
+    "detail.unarchive" to "Вернуть из архива",
+    "detail.archived" to "в архиве",
+    "detail.mark_unread" to "Отметить непрочитанным",
+    "detail.mark_read" to "Отметить прочитанным",
+    "detail.share" to "Поделиться",
+    "detail.open_app" to "Открыть приложение",
+    "settings.import_backup" to "Импортировать резервную копию",
+    "settings.import_backup_desc" to "Восстановить записи из JSON-файла в Downloads",
+    "settings.show_raw" to "Раскрывать сырые данные",
+    "settings.show_raw_desc" to "Сразу открывать блок JSON на экране записи",
+    "toast.copied" to "Скопировано в буфер обмена",
+    "toast.marked_read" to "Все записи отмечены прочитанными",
+    "toast.backup_imported" to "Восстановлено записей: %d",
+    "toast.import_failed" to "Ошибка импорта: %s"
 )

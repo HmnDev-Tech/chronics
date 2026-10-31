@@ -1,11 +1,14 @@
 package com.hmndev.chronika.ui
 
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
 import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
+import com.hmndev.chronika.data.AppSettings
 import com.hmndev.chronika.data.SettingsStore
 
 enum class ScreenClass { COMPACT, MEDIUM, EXPANDED }
@@ -21,7 +24,7 @@ data class DeviceProfile(
     val density: Float,
     val scale: Float,
     val screenClass: ScreenClass,
-    val adaptive: Boolean
+    val adaptive: Boolean,
 ) {
     fun dp(value: Dp): Dp = (value.value * scale).dp
     fun dp(value: Float): Dp = (value * scale).dp
@@ -59,10 +62,11 @@ val LocalDeviceProfile = staticCompositionLocalOf {
 }
 
 @Composable
-fun rememberDeviceProfile(): DeviceProfile {
+fun rememberDeviceProfile(settings: AppSettings? = null): DeviceProfile {
     val configuration = LocalConfiguration.current
     val density = LocalDensity.current.density
-    val settings = SettingsStore.current()
+    val observedSettings by SettingsStore.settings.collectAsState()
+    val activeSettings = settings ?: observedSettings
     val width = configuration.screenWidthDp
     val height = configuration.screenHeightDp
     val screenClass = when {
@@ -72,10 +76,10 @@ fun rememberDeviceProfile(): DeviceProfile {
     }
     val auto = ((width / 400f) * 0.65f + (height / 860f) * 0.35f)
         .coerceIn(0.86f, 1.14f)
-    val scale = if (settings.adaptiveLayout) {
-        (auto * settings.uiScale).coerceIn(0.8f, 1.25f)
+    val scale = if (activeSettings.adaptiveLayout) {
+        (auto * activeSettings.uiScale).coerceIn(0.8f, 1.25f)
     } else {
         1f
     }
-    return DeviceProfile(width, height, density, scale, screenClass, settings.adaptiveLayout)
+    return DeviceProfile(width, height, density, scale, screenClass, activeSettings.adaptiveLayout)
 }
