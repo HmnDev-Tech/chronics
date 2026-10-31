@@ -31,6 +31,9 @@ data class AppSettings(
     val adaptiveLayout: Boolean = true,
     val uiScale: Float = 1f
 ) {
+    val safeFolderName: String
+        get() = sanitizeFolder(folderName)
+
     fun appAllowed(packageName: String): Boolean {
         if (includedOnly) return excludedApps.contains(packageName)
         return !excludedApps.contains(packageName)
