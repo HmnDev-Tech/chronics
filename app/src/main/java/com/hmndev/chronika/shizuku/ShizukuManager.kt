@@ -3,6 +3,7 @@ package com.hmndev.chronika.shizuku
 import android.content.ComponentName
 import android.content.Context
 import android.content.pm.PackageManager
+import com.hamondev.shevery.api.SheveryPrivilege
 import com.hmndev.chronika.i18n.S
 import com.hmndev.chronika.service.CaptureEngine
 import com.hmndev.chronika.service.JournalAccessibilityService
@@ -18,11 +19,18 @@ import rikka.shizuku.Shizuku
 import java.io.BufferedReader
 import java.io.InputStreamReader
 
+enum class PrivilegedBackend {
+    SHEVERY,
+    SHIZUKU,
+    NONE
+}
+
 data class ShizukuState(
     val available: Boolean = false,
     val permissionGranted: Boolean = false,
     val version: Int = 0,
     val message: String = S["shizuku.not_running"],
+    val backend: PrivilegedBackend = PrivilegedBackend.NONE,
 )
 
 data class ShellResult(
@@ -46,6 +54,16 @@ object ShizukuManager {
     @Volatile
     private var initialized = false
 
+    private val sheveryBinderReceived = SheveryPrivilege.OnBinderReceivedListener {
+        refresh()
+    }
+    private val sheveryBinderDead = SheveryPrivilege.OnBinderDeadListener {
+        refresh()
+    }
+    private val sheveryPermissionResult = SheveryPrivilege.OnPermissionResultListener { _, grantResult ->
+        refresh(grantResult == PackageManager.PERMISSION_GRANTED)
+    }
+
     private val binderReceived = Shizuku.OnBinderReceivedListener {
         refresh()
     }
@@ -56,44 +74,85 @@ object ShizukuManager {
         refresh(grantResult == PackageManager.PERMISSION_GRANTED)
     }
 
-    fun init() {
-        if (initialized) return
-        initialized = true
-        runCatching {
-            Shizuku.addBinderReceivedListenerSticky(binderReceived)
-            Shizuku.addBinderDeadListener(binderDead)
-            Shizuku.addRequestPermissionResultListener(permissionResult)
+    fun init(context: Context? = null) {
+        if (!initialized) {
+            initialized = true
+            runCatching {
+                SheveryPrivilege.addBinderReceivedListener(sheveryBinderReceived)
+                SheveryPrivilege.addBinderDeadListener(sheveryBinderDead)
+                SheveryPrivilege.addRequestPermissionResultListener(sheveryPermissionResult)
+            }
+            runCatching {
+                Shizuku.addBinderReceivedListenerSticky(binderReceived)
+                Shizuku.addBinderDeadListener(binderDead)
+                Shizuku.addRequestPermissionResultListener(permissionResult)
+            }
+        }
+        if (context != null) {
+            runCatching { SheveryPrivilege.connectFast(context) }
         }
         refresh()
     }
 
     fun refresh(forcedPermission: Boolean? = null) {
-        val available = runCatching { Shizuku.pingBinder() }.getOrDefault(false)
-        val version = if (available) {
+        val sheveryAvailable = runCatching { SheveryPrivilege.pingBinder() }.getOrDefault(false)
+        if (sheveryAvailable) {
+            val version = runCatching { SheveryPrivilege.getVersion() }.getOrDefault(0)
+            val permission = when {
+                forcedPermission != null -> forcedPermission
+                else -> runCatching {
+                    SheveryPrivilege.checkSelfPermission() == PackageManager.PERMISSION_GRANTED
+                }.getOrDefault(false)
+            }
+            val message = when {
+                !permission -> S["shizuku.permission_needed"]
+                else -> S.f("shizuku.active", version).replace("Shizuku", "Shevery")
+            }
+            _state.value = ShizukuState(
+                available = true,
+                permissionGranted = permission,
+                version = version,
+                message = message,
+                backend = PrivilegedBackend.SHEVERY
+            )
+            return
+        }
+
+        val shizukuAvailable = runCatching { Shizuku.pingBinder() }.getOrDefault(false)
+        val version = if (shizukuAvailable) {
             runCatching { Shizuku.getVersion() }.getOrDefault(0)
         } else {
             0
         }
         val permission = when {
-            !available -> false
+            !shizukuAvailable -> false
             forcedPermission != null -> forcedPermission
             runCatching { Shizuku.isPreV11() }.getOrDefault(true) -> false
             else -> runCatching {
                 Shizuku.checkSelfPermission() == PackageManager.PERMISSION_GRANTED
             }.getOrDefault(false)
         }
+        val backend = if (shizukuAvailable) PrivilegedBackend.SHIZUKU else PrivilegedBackend.NONE
         val message = when {
-            !available -> S["shizuku.unavailable"]
+            !shizukuAvailable -> S["shizuku.unavailable"]
             !permission -> S["shizuku.permission_needed"]
             else -> S.f("shizuku.active", version)
         }
-        _state.value = ShizukuState(available, permission, version, message)
+        _state.value = ShizukuState(shizukuAvailable, permission, version, message, backend)
     }
 
     fun requestPermission() {
         val current = _state.value
         if (!current.available) {
             _state.value = current.copy(message = S["shizuku.start_first"])
+            return
+        }
+        if (current.backend == PrivilegedBackend.SHEVERY || SheveryPrivilege.pingBinder()) {
+            runCatching {
+                SheveryPrivilege.requestPermission(REQUEST_CODE)
+            }.onFailure {
+                _state.value = current.copy(message = S.f("shizuku.request_failed", it.message))
+            }
             return
         }
         runCatching {
@@ -104,27 +163,32 @@ object ShizukuManager {
     }
 
     suspend fun runCommand(command: String): ShellResult = withContext(Dispatchers.IO) {
-        if (!_state.value.available) {
+        val current = _state.value
+        if (!current.available) {
             return@withContext ShellResult(false, message = S["shizuku.not_running"])
         }
-        if (!_state.value.permissionGranted) {
+        if (!current.permissionGranted) {
             return@withContext ShellResult(false, message = S["shizuku.no_permission"])
         }
         var process: Process? = null
         try {
-            val method = Shizuku::class.java.getDeclaredMethod(
-                "newProcess",
-                emptyArray<String>()::class.java,
-                emptyArray<String>()::class.java,
-                String::class.java
-            )
-            method.isAccessible = true
-            val spawned = method.invoke(
-                null,
-                arrayOf("sh", "-c", command),
-                null,
-                null
-            ) as Process
+            val spawned: Process = if (current.backend == PrivilegedBackend.SHEVERY || SheveryPrivilege.pingBinder()) {
+                SheveryPrivilege.newProcess(arrayOf("sh", "-c", command), null, null)
+            } else {
+                val method = Shizuku::class.java.getDeclaredMethod(
+                    "newProcess",
+                    emptyArray<String>()::class.java,
+                    emptyArray<String>()::class.java,
+                    String::class.java
+                )
+                method.isAccessible = true
+                method.invoke(
+                    null,
+                    arrayOf("sh", "-c", command),
+                    null,
+                    null
+                ) as Process
+            }
             process = spawned
             val (stdout, stderr) = coroutineScope {
                 val out = async(Dispatchers.IO) {

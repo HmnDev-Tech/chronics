@@ -13,7 +13,7 @@ class ChronikaApp : Application() {
         SettingsStore.init(this)
         S.setLanguage(AppLanguage.resolve(SettingsStore.current().language))
         JournalDb.get(this)
-        ShizukuManager.init()
+        ShizukuManager.init(this)
         ShizukuManager.refresh()
     }
 }
