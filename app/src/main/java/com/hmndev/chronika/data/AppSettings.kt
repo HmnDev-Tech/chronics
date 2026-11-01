@@ -25,6 +25,7 @@ data class AppSettings(
     val requiredKeywords: String = "",
     val themeMode: String = "system",
     val dynamicColor: Boolean = true,
+    val motionBlur: Boolean = false,
     val compact: Boolean = false,
     val showRawPayload: Boolean = false,
     val language: String = "",

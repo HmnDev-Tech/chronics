@@ -80,14 +80,23 @@ object PermissionTools {
         }
     }
 
-    fun openShizuku(context: Context) {
+    fun openShevery(context: Context) {
         val launch = context.packageManager.getLaunchIntentForPackage("com.hamondev.shevery")
-            ?: context.packageManager.getLaunchIntentForPackage("moe.shizuku.privileged.api")
         if (launch != null) {
             launch.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
             context.startActivity(launch)
         } else {
             openUrl(context, "https://github.com/HmnDev-Tech/shevery")
+        }
+    }
+
+    fun openShizuku(context: Context) {
+        val launch = context.packageManager.getLaunchIntentForPackage("moe.shizuku.privileged.api")
+        if (launch != null) {
+            launch.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+            context.startActivity(launch)
+        } else {
+            openUrl(context, "https://shizuku.rikka.app/")
         }
     }
 

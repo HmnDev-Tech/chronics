@@ -292,7 +292,9 @@ fun ChronikaRoot(viewModel: JournalViewModel) {
                                         PermissionTools.openAccessibilitySettings(context)
                                     },
                                     onOpenShizuku = { PermissionTools.openShizuku(context) },
-                                    onRequestShizuku = { ShizukuManager.requestPermission() },
+                                    onRequestShizuku = { ShizukuManager.requestShizukuPermission() },
+                                    onOpenShevery = { PermissionTools.openShevery(context) },
+                                    onRequestShevery = { ShizukuManager.requestSheveryPermission() },
                                     onGrantListener = {
                                         scope.launch {
                                             notify(viewModel.grantListener())

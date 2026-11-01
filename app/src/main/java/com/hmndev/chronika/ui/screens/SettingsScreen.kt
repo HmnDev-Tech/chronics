@@ -24,6 +24,7 @@ import androidx.compose.material.icons.rounded.Apps
 import androidx.compose.material.icons.rounded.Archive
 import androidx.compose.material.icons.rounded.AutoAwesome
 import androidx.compose.material.icons.rounded.Bolt
+import androidx.compose.material.icons.rounded.BlurOn
 import androidx.compose.material.icons.rounded.CleaningServices
 import androidx.compose.material.icons.rounded.CloudDownload
 import androidx.compose.material.icons.rounded.Code
@@ -38,6 +39,9 @@ import androidx.compose.material.icons.rounded.Security
 import androidx.compose.material.icons.rounded.Storage
 import androidx.compose.material.icons.rounded.Terminal
 import androidx.compose.material.icons.rounded.Tune
+import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.ui.text.font.FontWeight
+import com.hmndev.chronika.ui.components.scrollMotionBlur
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.FilledTonalButton
@@ -91,6 +95,8 @@ fun SettingsScreen(
     onOpenAccessibilitySettings: () -> Unit,
     onOpenShizuku: () -> Unit,
     onRequestShizuku: () -> Unit,
+    onOpenShevery: () -> Unit = {},
+    onRequestShevery: () -> Unit = {},
     onGrantListener: () -> Unit,
     onGrantAccessibility: () -> Unit,
     onImportShizuku: () -> Unit,
@@ -116,6 +122,7 @@ fun SettingsScreen(
         mutableStateOf(settings.uiScale)
     }
     val focusManager = LocalFocusManager.current
+    val listState = rememberLazyListState()
 
     fun commitMaxEntries() {
         val parsed = maxEntriesDraft.toIntOrNull()?.coerceIn(500, 200000)
@@ -127,6 +134,8 @@ fun SettingsScreen(
     }
 
     LazyColumn(
+        state = listState,
+        modifier = Modifier.scrollMotionBlur(listState, enabled = settings.motionBlur),
         contentPadding = PaddingValues(
             start = device.screenPadding,
             end = device.screenPadding,
@@ -136,31 +145,18 @@ fun SettingsScreen(
         verticalArrangement = Arrangement.spacedBy(0.dp)
     ) {
         item(key = "heading") {
-            Column {
-                Text(
-                    text = S["settings.eyebrow"],
-                    style = MaterialTheme.typography.labelSmall,
-                    color = scheme.primary
-                )
-                Text(
-                    text = S["settings.title"],
-                    style = MaterialTheme.typography.displaySmall,
-                    color = scheme.onSurface
-                )
-                Text(
-                    text = S["settings.subtitle"],
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = scheme.onSurfaceVariant
-                )
-                Spacer(Modifier.height(16.dp))
-            }
+            Text(
+                text = S["settings.title"],
+                style = MaterialTheme.typography.headlineMedium,
+                fontWeight = FontWeight.Bold,
+                color = scheme.onSurface,
+                modifier = Modifier.padding(start = 4.dp, top = 8.dp, bottom = 16.dp)
+            )
         }
 
         item(key = "access") {
             SettingsSection(
-                title = S["settings.access"],
-                subtitle = S["settings.access_sub"],
-                accent = Coral
+                title = S["settings.access"]
             ) {
                 AccessRow(
                     title = S["settings.listener"],
@@ -175,14 +171,114 @@ fun SettingsScreen(
                     granted = access.accessibility,
                     onClick = onOpenAccessibilitySettings
                 )
+            }
+        }
+
+        item(key = "shevery_card") {
+            SettingsSection(
+                title = S["settings.shevery"]
+            ) {
+                Column(Modifier.padding(horizontal = 16.dp, vertical = 12.dp)) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        SettingIcon(Icons.Rounded.Security, enabled = true, tint = scheme.primary)
+                        Spacer(Modifier.width(12.dp))
+                        Column(Modifier.weight(1f)) {
+                            Text(
+                                text = S["settings.shevery"],
+                                style = MaterialTheme.typography.titleMedium,
+                                fontWeight = FontWeight.Bold,
+                                color = scheme.onSurface
+                            )
+                            Text(
+                                text = S["settings.shevery_desc"],
+                                style = MaterialTheme.typography.bodySmall,
+                                color = scheme.onSurfaceVariant
+                            )
+                        }
+                    }
+                    Spacer(Modifier.height(8.dp))
+                    Text(
+                        text = if (shizuku.sheveryAvailable) {
+                            if (shizuku.sheveryPermissionGranted) {
+                                S.f("shizuku.active", shizuku.sheveryVersion).replace("Shizuku", "Shevery")
+                            } else {
+                                S["shizuku.permission_needed"]
+                            }
+                        } else {
+                            S["shizuku.not_running"].replace("Shizuku", "Shevery")
+                        },
+                        style = MaterialTheme.typography.labelMedium,
+                        fontWeight = FontWeight.Medium,
+                        color = if (shizuku.sheveryAvailable && shizuku.sheveryPermissionGranted) {
+                            Lime
+                        } else if (shizuku.sheveryAvailable) {
+                            scheme.tertiary
+                        } else {
+                            scheme.outline
+                        }
+                    )
+                }
+
+                if (shizuku.sheveryAvailable && !shizuku.sheveryPermissionGranted) {
+                    Row(
+                        modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        Button(onClick = onRequestShevery, shape = CircleShape) {
+                            Text(S["settings.shevery_allow"])
+                        }
+                    }
+                }
+
+                if (shizuku.sheveryAvailable && shizuku.sheveryPermissionGranted) {
+                    Row(
+                        modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        FilledTonalButton(onClick = onGrantListener, shape = CircleShape) {
+                            Text(S["settings.grant_listener"])
+                        }
+                        FilledTonalButton(onClick = onGrantAccessibility, shape = CircleShape) {
+                            Text(S["settings.grant_access"])
+                        }
+                    }
+                    SettingAction(
+                        title = S["settings.import_active"],
+                        description = S["settings.import_active_desc"],
+                        icon = Icons.Rounded.CloudDownload,
+                        onClick = onImportShizuku
+                    )
+                }
+
                 SettingsGroupDivider()
+                SettingAction(
+                    title = S["settings.open_shevery"],
+                    description = S["settings.open_shevery_desc"],
+                    icon = Icons.Rounded.Security,
+                    onClick = onOpenShevery
+                )
+            }
+        }
+
+        item(key = "shizuku") {
+            SettingsSection(
+                title = "Shizuku"
+            ) {
                 AccessRow(
                     title = "Shizuku",
-                    description = shizuku.message,
-                    granted = shizuku.available && shizuku.permissionGranted,
+                    description = if (shizuku.shizukuAvailable) {
+                        if (shizuku.shizukuPermissionGranted) {
+                            S.f("shizuku.active", shizuku.shizukuVersion)
+                        } else {
+                            S["shizuku.permission_needed"]
+                        }
+                    } else {
+                        S["shizuku.not_running"]
+                    },
+                    granted = shizuku.shizukuAvailable && shizuku.shizukuPermissionGranted,
                     onClick = onOpenShizuku
                 )
-                if (shizuku.available && !shizuku.permissionGranted) {
+                if (shizuku.shizukuAvailable && !shizuku.shizukuPermissionGranted) {
                     Row(
                         modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp),
                         horizontalArrangement = Arrangement.spacedBy(8.dp)
@@ -192,7 +288,7 @@ fun SettingsScreen(
                         }
                     }
                 }
-                if (shizuku.permissionGranted) {
+                if (shizuku.shizukuAvailable && shizuku.shizukuPermissionGranted && !shizuku.sheveryAvailable) {
                     Row(
                         modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp),
                         horizontalArrangement = Arrangement.spacedBy(8.dp)
@@ -497,11 +593,19 @@ fun SettingsScreen(
                 }
                 SettingsGroupDivider()
                 SettingSwitch(
-                    title = S["settings.dynamic"],
-                    description = S["settings.dynamic_desc"],
+                    title = S["settings.system_theme_color"],
+                    description = S["settings.system_theme_color_desc"],
                     checked = settings.dynamicColor,
                     onCheckedChange = { value -> onUpdate { it.copy(dynamicColor = value) } },
                     icon = Icons.Rounded.ColorLens
+                )
+                SettingsGroupDivider()
+                SettingSwitch(
+                    title = S["settings.motion_blur"],
+                    description = S["settings.motion_blur_desc"],
+                    checked = settings.motionBlur,
+                    onCheckedChange = { value -> onUpdate { it.copy(motionBlur = value) } },
+                    icon = Icons.Rounded.BlurOn
                 )
                 SettingsGroupDivider()
                 SettingSwitch(
