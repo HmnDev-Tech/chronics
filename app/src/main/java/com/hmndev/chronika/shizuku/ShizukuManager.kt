@@ -31,6 +31,12 @@ data class ShizukuState(
     val version: Int = 0,
     val message: String = S["shizuku.not_running"],
     val backend: PrivilegedBackend = PrivilegedBackend.NONE,
+    val sheveryAvailable: Boolean = false,
+    val sheveryPermissionGranted: Boolean = false,
+    val sheveryVersion: Int = 0,
+    val shizukuAvailable: Boolean = false,
+    val shizukuPermissionGranted: Boolean = false,
+    val shizukuVersion: Int = 0,
 )
 
 data class ShellResult(
@@ -96,49 +102,86 @@ object ShizukuManager {
 
     fun refresh(forcedPermission: Boolean? = null) {
         val sheveryAvailable = runCatching { SheveryPrivilege.pingBinder() }.getOrDefault(false)
-        if (sheveryAvailable) {
-            val version = runCatching { SheveryPrivilege.getVersion() }.getOrDefault(0)
-            val permission = when {
-                forcedPermission != null -> forcedPermission
-                else -> runCatching {
-                    SheveryPrivilege.checkSelfPermission() == PackageManager.PERMISSION_GRANTED
-                }.getOrDefault(false)
-            }
-            val message = when {
-                !permission -> S["shizuku.permission_needed"]
-                else -> S.f("shizuku.active", version).replace("Shizuku", "Shevery")
-            }
-            _state.value = ShizukuState(
-                available = true,
-                permissionGranted = permission,
-                version = version,
-                message = message,
-                backend = PrivilegedBackend.SHEVERY
-            )
-            return
+        val sheveryVersion = if (sheveryAvailable) runCatching { SheveryPrivilege.getVersion() }.getOrDefault(0) else 0
+        val sheveryPermission = when {
+            !sheveryAvailable -> false
+            forcedPermission != null && _state.value.backend == PrivilegedBackend.SHEVERY -> forcedPermission
+            else -> runCatching {
+                SheveryPrivilege.checkSelfPermission() == PackageManager.PERMISSION_GRANTED
+            }.getOrDefault(false)
         }
 
         val shizukuAvailable = runCatching { Shizuku.pingBinder() }.getOrDefault(false)
-        val version = if (shizukuAvailable) {
+        val shizukuVersion = if (shizukuAvailable) {
             runCatching { Shizuku.getVersion() }.getOrDefault(0)
         } else {
             0
         }
-        val permission = when {
+        val shizukuPermission = when {
             !shizukuAvailable -> false
-            forcedPermission != null -> forcedPermission
+            forcedPermission != null && _state.value.backend == PrivilegedBackend.SHIZUKU -> forcedPermission
             runCatching { Shizuku.isPreV11() }.getOrDefault(true) -> false
             else -> runCatching {
                 Shizuku.checkSelfPermission() == PackageManager.PERMISSION_GRANTED
             }.getOrDefault(false)
         }
+
+        if (sheveryAvailable) {
+            val message = when {
+                !sheveryPermission -> S["shizuku.permission_needed"]
+                else -> S.f("shizuku.active", sheveryVersion).replace("Shizuku", "Shevery")
+            }
+            _state.value = ShizukuState(
+                available = true,
+                permissionGranted = sheveryPermission,
+                version = sheveryVersion,
+                message = message,
+                backend = PrivilegedBackend.SHEVERY,
+                sheveryAvailable = true,
+                sheveryPermissionGranted = sheveryPermission,
+                sheveryVersion = sheveryVersion,
+                shizukuAvailable = shizukuAvailable,
+                shizukuPermissionGranted = shizukuPermission,
+                shizukuVersion = shizukuVersion
+            )
+            return
+        }
+
         val backend = if (shizukuAvailable) PrivilegedBackend.SHIZUKU else PrivilegedBackend.NONE
         val message = when {
             !shizukuAvailable -> S["shizuku.unavailable"]
-            !permission -> S["shizuku.permission_needed"]
-            else -> S.f("shizuku.active", version)
+            !shizukuPermission -> S["shizuku.permission_needed"]
+            else -> S.f("shizuku.active", shizukuVersion)
         }
-        _state.value = ShizukuState(shizukuAvailable, permission, version, message, backend)
+        _state.value = ShizukuState(
+            available = shizukuAvailable,
+            permissionGranted = shizukuPermission,
+            version = shizukuVersion,
+            message = message,
+            backend = backend,
+            sheveryAvailable = false,
+            sheveryPermissionGranted = false,
+            sheveryVersion = 0,
+            shizukuAvailable = shizukuAvailable,
+            shizukuPermissionGranted = shizukuPermission,
+            shizukuVersion = shizukuVersion
+        )
+    }
+
+    fun requestSheveryPermission() {
+        runCatching {
+            SheveryPrivilege.requestPermission(REQUEST_CODE)
+        }.onFailure {
+            _state.value = _state.value.copy(message = S.f("shizuku.request_failed", it.message))
+        }
+    }
+
+    fun requestShizukuPermission() {
+        runCatching {
+            Shizuku.requestPermission(REQUEST_CODE)
+        }.onFailure {
+            _state.value = _state.value.copy(message = S.f("shizuku.request_failed", it.message))
+        }
     }
 
     fun requestPermission() {
@@ -148,18 +191,10 @@ object ShizukuManager {
             return
         }
         if (current.backend == PrivilegedBackend.SHEVERY || SheveryPrivilege.pingBinder()) {
-            runCatching {
-                SheveryPrivilege.requestPermission(REQUEST_CODE)
-            }.onFailure {
-                _state.value = current.copy(message = S.f("shizuku.request_failed", it.message))
-            }
+            requestSheveryPermission()
             return
         }
-        runCatching {
-            Shizuku.requestPermission(REQUEST_CODE)
-        }.onFailure {
-            _state.value = current.copy(message = S.f("shizuku.request_failed", it.message))
-        }
+        requestShizukuPermission()
     }
 
     suspend fun runCommand(command: String): ShellResult = withContext(Dispatchers.IO) {

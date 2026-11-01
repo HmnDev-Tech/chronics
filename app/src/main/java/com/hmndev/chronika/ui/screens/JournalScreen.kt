@@ -15,6 +15,8 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
+import androidx.compose.foundation.lazy.rememberLazyListState
+import com.hmndev.chronika.ui.components.scrollMotionBlur
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.shape.CircleShape
@@ -129,8 +131,11 @@ fun JournalScreen(
     val groups = remember(filtered) {
         filtered.groupBy { TimeTools.dayKey(it.postedAt) }
     }
+    val listState = rememberLazyListState()
 
     LazyColumn(
+        state = listState,
+        modifier = Modifier.scrollMotionBlur(listState, enabled = settings.motionBlur),
         contentPadding = PaddingValues(bottom = device.dp(126.dp)),
         verticalArrangement = Arrangement.spacedBy(0.dp)
     ) {

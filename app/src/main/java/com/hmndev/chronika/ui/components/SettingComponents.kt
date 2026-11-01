@@ -33,46 +33,34 @@ import androidx.compose.ui.unit.dp
 @Composable
 fun SettingsSection(
     title: String,
-    subtitle: String,
-    accent: Color,
+    subtitle: String = "",
+    accent: Color = MaterialTheme.colorScheme.primary,
     modifier: Modifier = Modifier,
     content: @Composable () -> Unit
 ) {
-    Column(modifier = modifier.fillMaxWidth()) {
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            Box(
-                Modifier
-                    .width(26.dp)
-                    .height(4.dp)
-                    .clip(RoundedCornerShape(50))
-                    .background(accent)
+    Column(
+        modifier = modifier
+            .fillMaxWidth()
+            .padding(bottom = 16.dp)
+    ) {
+        if (title.isNotBlank()) {
+            Text(
+                text = title,
+                modifier = Modifier.padding(start = 12.dp, bottom = 8.dp),
+                style = MaterialTheme.typography.titleSmall,
+                color = MaterialTheme.colorScheme.primary,
+                fontWeight = FontWeight.SemiBold
             )
-            Spacer(Modifier.width(9.dp))
-            Column {
-                Text(
-                    text = title,
-                    style = MaterialTheme.typography.titleLarge,
-                    color = MaterialTheme.colorScheme.onSurface
-                )
-                Text(
-                    text = subtitle,
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-            }
         }
-        Spacer(Modifier.height(10.dp))
         Surface(
-            shape = RoundedCornerShape(30.dp),
-            color = MaterialTheme.colorScheme.surfaceContainerLow,
-            tonalElevation = 0.dp,
-            shadowElevation = 1.dp
+            modifier = Modifier.fillMaxWidth(),
+            shape = MaterialTheme.shapes.extraLarge,
+            color = MaterialTheme.colorScheme.surfaceContainerHigh
         ) {
             Column(Modifier.padding(vertical = 4.dp)) {
                 content()
             }
         }
-        Spacer(Modifier.height(20.dp))
     }
 }
 
@@ -239,7 +227,7 @@ fun SettingsGroupDivider() {
         Modifier
             .padding(horizontal = 16.dp)
             .fillMaxWidth()
-            .height(1.dp)
-            .background(MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.45f))
+            .height(0.5.dp)
+            .background(MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.35f))
     )
 }

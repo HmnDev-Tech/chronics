@@ -76,6 +76,7 @@ object SettingsStore {
             putString("requiredKeywords", next.requiredKeywords)
             putString("themeMode", next.themeMode)
             putBoolean("dynamicColor", next.dynamicColor)
+            putBoolean("motionBlur", next.motionBlur)
             putBoolean("compact", next.compact)
             putBoolean("showRawPayload", next.showRawPayload)
             putString("language", next.language)
@@ -112,6 +113,7 @@ object SettingsStore {
             requiredKeywords = prefs.getString("requiredKeywords", defaults.requiredKeywords).orEmpty(),
             themeMode = prefs.getString("themeMode", defaults.themeMode).orEmpty().ifBlank { defaults.themeMode },
             dynamicColor = prefs.getBoolean("dynamicColor", defaults.dynamicColor),
+            motionBlur = prefs.getBoolean("motionBlur", defaults.motionBlur),
             compact = prefs.getBoolean("compact", defaults.compact),
             showRawPayload = prefs.getBoolean("showRawPayload", defaults.showRawPayload),
             language = prefs.getString("language", defaults.language).orEmpty(),
