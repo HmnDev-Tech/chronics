@@ -112,7 +112,7 @@ dependencies {
     implementation("androidx.compose.ui:ui-graphics:1.12.1")
     implementation("androidx.compose.ui:ui-tooling-preview:1.12.1")
     implementation("androidx.compose.foundation:foundation:1.12.1")
-    implementation("androidx.compose.material3:material3:1.5.0-beta02")
+    implementation("androidx.compose.material3:material3:1.5.0-rc01")
     implementation("androidx.compose.material:material-icons-extended:1.7.8")
 
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.11.0")
