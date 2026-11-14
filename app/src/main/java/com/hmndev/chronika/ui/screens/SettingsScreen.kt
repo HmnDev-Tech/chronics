@@ -59,6 +59,7 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.ToggleButton
 import androidx.compose.material3.ToggleButtonDefaults
+import androidx.compose.material3.ToggleButtonShapes
 import androidx.compose.material3.toShape
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
@@ -675,12 +676,12 @@ fun SettingsScreen(
                             ToggleButton(
                                 checked = selected,
                                 onCheckedChange = { onUpdate { it.copy(themeMode = value) } },
-                                shapes = ToggleButtonDefaults.shapes(
+                                shapes = ToggleButtonShapes(
                                     shape = RoundedCornerShape(16.dp),
                                     pressedShape = RoundedCornerShape(9.dp),
                                     checkedShape = CircleShape
                                 ),
-                                colors = ToggleButtonDefaults.filledTonalToggleButtonColors(
+                                colors = ToggleButtonDefaults.colors(
                                     containerColor = scheme.surfaceContainerLow,
                                     contentColor = scheme.onSurfaceVariant,
                                     checkedContainerColor = scheme.primary,
@@ -766,12 +767,12 @@ fun SettingsScreen(
                                     ShizukuManager.refresh()
                                     context.findActivity()?.recreate()
                                 },
-                                shapes = ToggleButtonDefaults.shapes(
+                                shapes = ToggleButtonShapes(
                                     shape = RoundedCornerShape(16.dp),
                                     pressedShape = RoundedCornerShape(9.dp),
                                     checkedShape = CircleShape
                                 ),
-                                colors = ToggleButtonDefaults.filledTonalToggleButtonColors(
+                                colors = ToggleButtonDefaults.colors(
                                     containerColor = scheme.surfaceContainerLow,
                                     contentColor = scheme.onSurfaceVariant,
                                     checkedContainerColor = scheme.primaryContainer,

@@ -27,6 +27,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.material3.ToggleButton
 import androidx.compose.material3.ToggleButtonDefaults
+import androidx.compose.material3.ToggleButtonShapes
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
@@ -87,12 +88,12 @@ fun FilterLens(
                 onCheckedChange = { onSelected(filter) },
                 interactionSource = interaction,
                 modifier = Modifier.pressScale(interaction),
-                shapes = ToggleButtonDefaults.shapes(
+                shapes = ToggleButtonShapes(
                     shape = RoundedCornerShape(18.dp),
                     pressedShape = RoundedCornerShape(10.dp),
                     checkedShape = CircleShape
                 ),
-                colors = ToggleButtonDefaults.filledTonalToggleButtonColors(
+                colors = ToggleButtonDefaults.colors(
                     containerColor = scheme.surfaceContainerLow,
                     contentColor = scheme.onSurfaceVariant,
                     checkedContainerColor = scheme.primary,

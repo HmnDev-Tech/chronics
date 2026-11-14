@@ -234,10 +234,11 @@ fun ChronikaHero(
                     )
                 }
                 Spacer(Modifier.height(8.dp))
+                val heroCountScaleSpec = MaterialTheme.motionScheme.fastSpatialSpec<Float>()
                 AnimatedContent(
                     targetState = stats.today,
                     transitionSpec = {
-                        (scaleIn(initialScale = 0.82f, animationSpec = MaterialTheme.motionScheme.fastSpatialSpec()) + fadeIn())
+                        (scaleIn(initialScale = 0.82f, animationSpec = heroCountScaleSpec) + fadeIn())
                             .togetherWith(scaleOut(targetScale = 1.1f) + fadeOut())
                     },
                     label = "heroCount"

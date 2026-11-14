@@ -45,6 +45,7 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.ToggleButton
 import androidx.compose.material3.ToggleButtonDefaults
+import androidx.compose.material3.ToggleButtonShapes
 import androidx.compose.material3.toShape
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -248,12 +249,12 @@ fun JournalScreen(
                             ToggleButton(
                                 checked = selectedAll,
                                 onCheckedChange = { selectedPackage = "" },
-                                shapes = ToggleButtonDefaults.shapes(
+                                shapes = ToggleButtonShapes(
                                     shape = RoundedCornerShape(14.dp),
                                     pressedShape = RoundedCornerShape(8.dp),
                                     checkedShape = CircleShape
                                 ),
-                                colors = ToggleButtonDefaults.filledTonalToggleButtonColors(
+                                colors = ToggleButtonDefaults.colors(
                                     containerColor = scheme.surfaceContainerLow,
                                     contentColor = scheme.onSurfaceVariant,
                                     checkedContainerColor = scheme.secondaryContainer,
@@ -274,12 +275,12 @@ fun JournalScreen(
                                 onCheckedChange = {
                                     selectedPackage = if (isSelected) "" else app.packageName
                                 },
-                                shapes = ToggleButtonDefaults.shapes(
+                                shapes = ToggleButtonShapes(
                                     shape = RoundedCornerShape(14.dp),
                                     pressedShape = RoundedCornerShape(8.dp),
                                     checkedShape = CircleShape
                                 ),
-                                colors = ToggleButtonDefaults.filledTonalToggleButtonColors(
+                                colors = ToggleButtonDefaults.colors(
                                     containerColor = scheme.surfaceContainerLow,
                                     contentColor = scheme.onSurfaceVariant,
                                     checkedContainerColor = scheme.primaryContainer,
