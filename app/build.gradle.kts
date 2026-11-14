@@ -32,8 +32,8 @@ android {
         applicationId = "com.hmndev.chronika"
         minSdk = 26
         targetSdk = 37
-        versionCode = 2
-        versionName = "1.0.0-beta01"
+        versionCode = 3
+        versionName = "1.0.0-beta02"
 
         vectorDrawables {
             useSupportLibrary = true
