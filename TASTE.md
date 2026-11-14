@@ -1,49 +1,48 @@
 # TASTE · why Chronics looks the way it does
 
 ## Idea
-Not a "list of notifications", but **a paper archive with a pulse**. A
-notification is an entry in an observation journal, not a row in an inbox.
-Hence: a paper palette, large typography, a timeline with a rail, and "pulse"
-as a metaphor for a living stream.
+Not a "list of notifications", but **a paper archive with a pulse** powered by
+**Material 3 Expressive**. Every notification is an entry in a living field
+journal: organic morphing shapes, asymmetric bento proportions, spring physics,
+and high-contrast editorial typography replace uniform rounded rectangles.
 
 ## Palette
-- `Paper #F7F4EA` / `Ink #1B1D17` — the base, warm paper instead of sterile white.
-- `Lime #D7F26A` — the "living" accent: pins, readiness, active filter.
-- `Coral #B84A2B` — the alarming one: missing permissions, important items, errors.
-- `Forest #2D4A32` — the main action tone, not default Material purple.
-- Dark theme — `Night #0F120E` with a lime accent, not an inversion of the light one.
+- `Paper #F6F4EC` / `Ink #12150F` — warm archival paper and crisp charcoal ink.
+- `Lime #C8FF2E` — living electric signal: pins, readiness, peak activity.
+- `Coral #FF5436` — alert & pulse accent: unread items, missing permissions.
+- `Forest #1E4628` — grounded primary action tone instead of generic purple.
+- `Clay #5C4278` — deep berry/plum secondary accent for high-contrast tags and stats.
+- Dark theme — `Night #0B0E09` / `ObsidianNight #141812` with electric lime.
 
-Dynamic color is opt-in and off by default: the brand palette matters more than
-"wallpaper".
+Dynamic color remains opt-in and off by default so the brand palette leads.
 
-## Composition
-- **Asymmetry instead of a grid**: a 246 dp hero block with a `Cookie9Sided`
-  blob, offset stat cards, a wave in the background.
-- **Timeline rail**: time on the left, a dot, a vertical line; cards shift by
-  4–8 dp depending on position — rhythm, not a table.
-- **Floating dock** instead of a NavigationBar: three items, the selected one
-  stretches and shows a label. Content lives under the dock.
-- **Insight mosaic**: one large card plus two small ones, not an even 2×2 grid.
-- **Large radii** (22–42 dp) and "pills" for metadata.
+## Expressive Shapes & Composition
+- **Continuous & stateful polygon morphing**: `MorphPolygonShape` + `androidx.graphics.shapes.Morph`
+  continuously morphs `MaterialShapes` (`Cookie9Sided`, `Sunny`, `Clover8Leaf`,
+  `Flower`, `SoftBurst`, `Cookie6Sided`, `Cookie4Sided`, `PuffyDiamond`, `Diamond`)
+  in hero backdrops, empty states, dock icons, action buttons, and app badges.
+- **Deterministic app polygon badges**: `appPolygon(packageName)` clips app icons
+  into expressive Material 3 shapes that morph into `MaterialShapes.Sunny` when
+  pinned or selected.
+- **Asymmetric organic cards**: `asymmetricExpressiveShape` varies corner radii
+  across timeline entries, bento mosaic cards, and detail containers instead of
+  uniform 24 dp rectangles; connected lists (`AppPickerScreen`) use
+  `segmentedItemShape`.
+- **Wavy progress & tactile toggles**: `CircularWavyProgressIndicator` and
+  `LinearWavyProgressIndicator` visualize daily share, archive capacity, and setup
+  readiness; `ToggleButton` with shape morphing replaces generic filter chips.
+- **Floating Expressive Dock**: three destinations with spring width expansion,
+  icon badge morphing (`Circle` <-> `Cookie9Sided`), and a rotating `Sunny` spark.
 
 ## Typography
-Display — Black/ExtraBold with negative tracking; utility captions —
-monospace with wide tracking. The contrast between the "poster headline" and
-the "technical caption" is the core of the character.
+Display — Black/ExtraBold (`-2.8` to `-0.5` sp tracking) paired with wide-tracked
+monospace utility captions (`+1.2` sp).
 
 ## Motion
-`MotionScheme.expressive()`: springs on the dock and cards, `pressScale` 0.965,
-smooth screen transitions, a pulsing dot in the hero. Animation emphasizes the
-action rather than decorating it.
-
-## What we avoided
-- The standard `NavigationBar` + `TopAppBar` + `ListItem` list.
-- Default purple Material You.
-- Uniform cards with the same radius and shadow.
-- Placeholder icons: the app shows real package icons, and when they are
-  missing — initials in a colored square.
+`MaterialTheme.motionScheme` (`MotionScheme.expressive()`): spatial springs on
+shape morphs, screen transitions, `pressScale` (`0.955f`), chart growth, and
+floating badges. Zero XML layouts or XML shape/drawable edits — pure Jetpack Compose.
 
 ## Functional honesty
 The design does not imitate features: every screen works with a real SQLite
-database, real notifications, real MediaStore, and real Shizuku. The test button
-posts a real notification instead of drawing a fake entry.
+database, real notifications, real MediaStore, and real Shizuku/Shevery.

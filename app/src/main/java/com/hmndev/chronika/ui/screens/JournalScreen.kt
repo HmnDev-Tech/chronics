@@ -1,7 +1,14 @@
 package com.hmndev.chronika.ui.screens
 
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.scaleIn
+import androidx.compose.animation.scaleOut
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -10,15 +17,15 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
-import androidx.compose.foundation.lazy.rememberLazyListState
-import com.hmndev.chronika.ui.components.scrollMotionBlur
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -28,14 +35,17 @@ import androidx.compose.material.icons.rounded.NotificationsOff
 import androidx.compose.material.icons.rounded.PushPin
 import androidx.compose.material.icons.rounded.Search
 import androidx.compose.material3.AssistChip
-import androidx.compose.material3.FilterChip
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.MaterialShapes
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
+import androidx.compose.material3.ToggleButton
+import androidx.compose.material3.ToggleButtonDefaults
+import androidx.compose.material3.toShape
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -45,6 +55,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -54,12 +65,15 @@ import com.hmndev.chronika.data.JournalEntry
 import com.hmndev.chronika.data.JournalStats
 import com.hmndev.chronika.i18n.S
 import com.hmndev.chronika.ui.LocalDeviceProfile
+import com.hmndev.chronika.ui.components.AppIcon
 import com.hmndev.chronika.ui.components.ChronikaHero
 import com.hmndev.chronika.ui.components.EmptyJournal
 import com.hmndev.chronika.ui.components.FilterLens
 import com.hmndev.chronika.ui.components.JournalFilter
 import com.hmndev.chronika.ui.components.SectionHeading
 import com.hmndev.chronika.ui.components.TimelineEntry
+import com.hmndev.chronika.ui.components.pressScale
+import com.hmndev.chronika.ui.components.scrollMotionBlur
 import com.hmndev.chronika.ui.theme.Coral
 import com.hmndev.chronika.ui.theme.Lime
 import com.hmndev.chronika.util.AccessState
@@ -80,6 +94,7 @@ fun JournalScreen(
     onTest: () -> Unit,
     onOpenInsights: () -> Unit,
 ) {
+    val scheme = MaterialTheme.colorScheme
     val device = LocalDeviceProfile.current
     var query by rememberSaveable { mutableStateOf("") }
     var filterName by rememberSaveable { mutableStateOf(JournalFilter.ALL.name) }
@@ -164,10 +179,28 @@ fun JournalScreen(
                         )
                     },
                     leadingIcon = {
-                        Icon(Icons.Rounded.Search, contentDescription = null)
+                        Box(
+                            modifier = Modifier
+                                .padding(start = 6.dp)
+                                .size(30.dp)
+                                .clip(MaterialShapes.Cookie9Sided.toShape())
+                                .background(scheme.primaryContainer),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Icon(
+                                imageVector = Icons.Rounded.Search,
+                                contentDescription = null,
+                                tint = scheme.onPrimaryContainer,
+                                modifier = Modifier.size(16.dp)
+                            )
+                        }
                     },
                     trailingIcon = {
-                        if (query.isNotBlank()) {
+                        AnimatedVisibility(
+                            visible = query.isNotBlank(),
+                            enter = scaleIn() + fadeIn(),
+                            exit = scaleOut() + fadeOut()
+                        ) {
                             IconButton(onClick = { query = "" }) {
                                 Icon(Icons.Rounded.Close, contentDescription = S["common.close"])
                             }
@@ -190,11 +223,20 @@ fun JournalScreen(
                                 onClick = onMarkAllRead,
                                 label = { Text("${S["journal.mark_all_read"]} (${stats.unread})") },
                                 leadingIcon = {
-                                    Icon(
-                                        imageVector = Icons.Rounded.DoneAll,
-                                        contentDescription = null,
-                                        modifier = Modifier.size(16.dp)
-                                    )
+                                    Box(
+                                        modifier = Modifier
+                                            .size(20.dp)
+                                            .clip(MaterialShapes.Sunny.toShape())
+                                            .background(Lime),
+                                        contentAlignment = Alignment.Center
+                                    ) {
+                                        Icon(
+                                            imageVector = Icons.Rounded.DoneAll,
+                                            contentDescription = null,
+                                            tint = scheme.onPrimaryContainer,
+                                            modifier = Modifier.size(12.dp)
+                                        )
+                                    }
                                 },
                                 shape = CircleShape
                             )
@@ -202,26 +244,62 @@ fun JournalScreen(
                     }
                     if (appOptions.size > 1) {
                         item(key = "app-all") {
-                            FilterChip(
-                                selected = activePackage.isBlank(),
-                                onClick = { selectedPackage = "" },
-                                label = { Text("${S["filter.all"]} · ${scopeEntries.size}") },
-                                shape = CircleShape
-                            )
+                            val selectedAll = activePackage.isBlank()
+                            ToggleButton(
+                                checked = selectedAll,
+                                onCheckedChange = { selectedPackage = "" },
+                                shapes = ToggleButtonDefaults.shapes(
+                                    shape = RoundedCornerShape(14.dp),
+                                    pressedShape = RoundedCornerShape(8.dp),
+                                    checkedShape = CircleShape
+                                ),
+                                colors = ToggleButtonDefaults.filledTonalToggleButtonColors(
+                                    containerColor = scheme.surfaceContainerLow,
+                                    contentColor = scheme.onSurfaceVariant,
+                                    checkedContainerColor = scheme.secondaryContainer,
+                                    checkedContentColor = scheme.onSecondaryContainer
+                                ),
+                                contentPadding = PaddingValues(horizontal = 12.dp, vertical = 6.dp)
+                            ) {
+                                Text(
+                                    text = "${S["filter.all"]} · ${scopeEntries.size}",
+                                    style = MaterialTheme.typography.labelMedium
+                                )
+                            }
                         }
                         items(appOptions, key = { "app-${it.packageName}" }) { app ->
-                            FilterChip(
-                                selected = activePackage == app.packageName,
-                                onClick = {
-                                    selectedPackage = if (activePackage == app.packageName) {
-                                        ""
-                                    } else {
-                                        app.packageName
-                                    }
+                            val isSelected = activePackage == app.packageName
+                            ToggleButton(
+                                checked = isSelected,
+                                onCheckedChange = {
+                                    selectedPackage = if (isSelected) "" else app.packageName
                                 },
-                                label = { Text("${app.appLabel} · ${app.count}") },
-                                shape = CircleShape
-                            )
+                                shapes = ToggleButtonDefaults.shapes(
+                                    shape = RoundedCornerShape(14.dp),
+                                    pressedShape = RoundedCornerShape(8.dp),
+                                    checkedShape = CircleShape
+                                ),
+                                colors = ToggleButtonDefaults.filledTonalToggleButtonColors(
+                                    containerColor = scheme.surfaceContainerLow,
+                                    contentColor = scheme.onSurfaceVariant,
+                                    checkedContainerColor = scheme.primaryContainer,
+                                    checkedContentColor = scheme.onPrimaryContainer
+                                ),
+                                contentPadding = PaddingValues(start = 7.dp, end = 12.dp, top = 5.dp, bottom = 5.dp)
+                            ) {
+                                AppIcon(
+                                    packageName = app.packageName,
+                                    label = app.appLabel,
+                                    size = 18.dp,
+                                    highlighted = isSelected
+                                )
+                                Spacer(Modifier.width(6.dp))
+                                Text(
+                                    text = "${app.appLabel} · ${app.count}",
+                                    style = MaterialTheme.typography.labelMedium,
+                                    maxLines = 1
+                                )
+                            }
                         }
                     }
                 }
@@ -241,7 +319,7 @@ fun JournalScreen(
         if (pinned.isNotEmpty() && filter != JournalFilter.ARCHIVED) {
             item(key = "pinnedHeading") {
                 Column(Modifier.padding(horizontal = device.screenPadding)) {
-                    Spacer(Modifier.height(12.dp))
+                    Spacer(Modifier.height(14.dp))
                     SectionHeading(
                         eyebrow = S["journal.pinned_eyebrow"],
                         title = S["journal.pinned_title"]
@@ -275,19 +353,33 @@ fun JournalScreen(
                         EmptyJournal(onTest = onTest, onOpenSettings = onOpenSettings)
                     } else {
                         Surface(
-                            shape = RoundedCornerShape(30.dp),
-                            color = MaterialTheme.colorScheme.surfaceContainerLow,
+                            shape = RoundedCornerShape(
+                                topStart = 34.dp,
+                                topEnd = 16.dp,
+                                bottomEnd = 34.dp,
+                                bottomStart = 24.dp
+                            ),
+                            color = scheme.surfaceContainerLow,
+                            border = BorderStroke(0.5.dp, scheme.outlineVariant.copy(alpha = 0.4f)),
                             modifier = Modifier.fillMaxWidth()
                         ) {
                             Column(Modifier.padding(22.dp)) {
+                                Box(
+                                    modifier = Modifier
+                                        .size(28.dp)
+                                        .clip(MaterialShapes.Clover4Leaf.toShape())
+                                        .background(scheme.secondaryContainer)
+                                )
+                                Spacer(Modifier.height(10.dp))
                                 Text(
                                     text = S["journal.empty_title"],
                                     style = MaterialTheme.typography.headlineSmall
                                 )
+                                Spacer(Modifier.height(4.dp))
                                 Text(
                                     text = S["journal.empty_body"],
                                     style = MaterialTheme.typography.bodyMedium,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                    color = scheme.onSurfaceVariant
                                 )
                             }
                         }
@@ -319,6 +411,7 @@ fun JournalScreen(
 @Composable
 private fun DayHeader(label: String, count: Int) {
     val device = LocalDeviceProfile.current
+    val scheme = MaterialTheme.colorScheme
     Row(
         modifier = Modifier
             .fillMaxWidth()
@@ -330,24 +423,42 @@ private fun DayHeader(label: String, count: Int) {
             ),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        Text(
-            text = label,
-            style = MaterialTheme.typography.titleMedium,
-            fontWeight = FontWeight.Bold,
-            color = MaterialTheme.colorScheme.onSurface
+        Box(
+            Modifier
+                .size(10.dp)
+                .clip(MaterialShapes.Cookie4Sided.toShape())
+                .background(scheme.primary)
         )
         Spacer(Modifier.width(8.dp))
         Text(
-            text = count.toString(),
-            style = MaterialTheme.typography.labelSmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant
+            text = label,
+            style = MaterialTheme.typography.titleMedium,
+            fontWeight = FontWeight.ExtraBold,
+            color = scheme.onSurface
         )
-        Spacer(Modifier.weight(1f))
+        Spacer(Modifier.width(8.dp))
+        Surface(
+            shape = CircleShape,
+            color = scheme.surfaceContainerHighest
+        ) {
+            Text(
+                text = count.toString(),
+                style = MaterialTheme.typography.labelSmall,
+                color = scheme.onSurfaceVariant,
+                modifier = Modifier.padding(horizontal = 8.dp, vertical = 2.dp)
+            )
+        }
+        Spacer(Modifier.width(10.dp))
         Box(
             Modifier
-                .height(1.dp)
-                .width(44.dp)
-                .background(MaterialTheme.colorScheme.outlineVariant)
+                .weight(1f)
+                .height(1.5.dp)
+                .clip(CircleShape)
+                .background(
+                    Brush.horizontalGradient(
+                        listOf(scheme.outlineVariant.copy(alpha = 0.7f), scheme.background)
+                    )
+                )
         )
     }
 }
@@ -359,28 +470,44 @@ private fun CaptureBanner(
     onOpenSettings: () -> Unit,
 ) {
     val device = LocalDeviceProfile.current
+    val scheme = MaterialTheme.colorScheme
     Surface(
         modifier = Modifier
             .fillMaxWidth()
             .padding(horizontal = device.screenPadding, vertical = device.dp(6.dp)),
-        shape = RoundedCornerShape(24.dp),
-        color = MaterialTheme.colorScheme.tertiaryContainer
+        shape = RoundedCornerShape(
+            topStart = 28.dp,
+            topEnd = 14.dp,
+            bottomEnd = 28.dp,
+            bottomStart = 20.dp
+        ),
+        color = scheme.tertiaryContainer,
+        border = BorderStroke(1.dp, Coral.copy(alpha = 0.35f))
     ) {
         Row(
             modifier = Modifier.padding(horizontal = 14.dp, vertical = 12.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            Icon(
-                imageVector = Icons.Rounded.NotificationsOff,
-                contentDescription = null,
-                tint = MaterialTheme.colorScheme.onTertiaryContainer
-            )
+            Box(
+                modifier = Modifier
+                    .size(36.dp)
+                    .clip(MaterialShapes.SoftBurst.toShape())
+                    .background(Coral.copy(alpha = 0.22f)),
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(
+                    imageVector = Icons.Rounded.NotificationsOff,
+                    contentDescription = null,
+                    tint = scheme.onTertiaryContainer,
+                    modifier = Modifier.size(18.dp)
+                )
+            }
             Spacer(Modifier.width(10.dp))
             Column(Modifier.weight(1f)) {
                 Text(
                     text = if (!enabled) S["journal.capture_off"] else S["journal.no_access"],
                     style = MaterialTheme.typography.titleSmall,
-                    color = MaterialTheme.colorScheme.onTertiaryContainer
+                    color = scheme.onTertiaryContainer
                 )
                 Text(
                     text = if (!enabled) {
@@ -389,7 +516,7 @@ private fun CaptureBanner(
                         S["journal.no_access_body"]
                     },
                     style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onTertiaryContainer.copy(alpha = 0.8f)
+                    color = scheme.onTertiaryContainer.copy(alpha = 0.85f)
                 )
             }
             TextButton(onClick = onOpenSettings) {
@@ -406,69 +533,106 @@ private fun PinnedMiniCard(
     onPin: () -> Unit,
 ) {
     val device = LocalDeviceProfile.current
+    val scheme = MaterialTheme.colorScheme
+    val interaction = remember(entry.id) { MutableInteractionSource() }
     Surface(
         modifier = Modifier
-            .width(device.dp(216.dp))
-            .clickable(onClick = onClick),
-        shape = RoundedCornerShape(26.dp),
-        color = MaterialTheme.colorScheme.primaryContainer
+            .width(device.dp(222.dp))
+            .pressScale(interaction)
+            .clickable(
+                interactionSource = interaction,
+                indication = null,
+                onClick = onClick
+            ),
+        shape = RoundedCornerShape(
+            topStart = 30.dp,
+            topEnd = 14.dp,
+            bottomEnd = 30.dp,
+            bottomStart = 20.dp
+        ),
+        color = scheme.primaryContainer,
+        border = BorderStroke(1.dp, scheme.primary.copy(alpha = 0.35f))
     ) {
-        Column(Modifier.padding(14.dp)) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
+        Box {
+            Box(
+                Modifier
+                    .size(64.dp)
+                    .align(Alignment.BottomEnd)
+                    .offset(x = 18.dp, y = 18.dp)
+                    .clip(MaterialShapes.Sunny.toShape())
+                    .background(scheme.primary.copy(alpha = 0.14f))
+            )
+            Column(Modifier.padding(14.dp)) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    AppIcon(
+                        packageName = entry.packageName,
+                        label = entry.appLabel,
+                        size = 22.dp,
+                        highlighted = true
+                    )
+                    Spacer(Modifier.width(7.dp))
+                    Text(
+                        text = entry.appLabel,
+                        style = MaterialTheme.typography.labelSmall,
+                        color = scheme.onPrimaryContainer,
+                        modifier = Modifier.weight(1f),
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
+                    )
+                    Box(
+                        modifier = Modifier
+                            .size(26.dp)
+                            .clip(MaterialShapes.Sunny.toShape())
+                            .background(scheme.primary)
+                            .clickable(onClick = onPin),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Icon(
+                            imageVector = Icons.Rounded.PushPin,
+                            contentDescription = S["common.unpin"],
+                            modifier = Modifier.size(13.dp),
+                            tint = scheme.onPrimary
+                        )
+                    }
+                }
+                Spacer(Modifier.height(6.dp))
                 Text(
-                    text = entry.appLabel,
-                    style = MaterialTheme.typography.labelSmall,
-                    color = MaterialTheme.colorScheme.onPrimaryContainer,
-                    modifier = Modifier.weight(1f),
+                    text = entry.displayTitle.ifBlank { entry.appLabel },
+                    style = MaterialTheme.typography.titleSmall,
+                    fontWeight = FontWeight.Bold,
+                    color = scheme.onPrimaryContainer,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis
                 )
-                IconButton(onClick = onPin, modifier = Modifier.size(26.dp)) {
-                    Icon(
-                        imageVector = Icons.Rounded.PushPin,
-                        contentDescription = S["common.unpin"],
-                        modifier = Modifier.size(14.dp),
-                        tint = MaterialTheme.colorScheme.onPrimaryContainer
+                Spacer(Modifier.height(3.dp))
+                Text(
+                    text = TextTools.compactPreview(entry.displayBody, 100),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = scheme.onPrimaryContainer.copy(alpha = 0.8f),
+                    maxLines = 2,
+                    overflow = TextOverflow.Ellipsis
+                )
+                Spacer(Modifier.height(9.dp))
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Box(
+                        Modifier
+                            .size(7.dp)
+                            .clip(MaterialShapes.Sunny.toShape())
+                            .background(Lime)
+                    )
+                    Spacer(Modifier.width(6.dp))
+                    Text(
+                        text = TimeTools.time(entry.postedAt),
+                        style = MaterialTheme.typography.labelSmall,
+                        color = scheme.onPrimaryContainer.copy(alpha = 0.72f)
+                    )
+                    Spacer(Modifier.weight(1f))
+                    Text(
+                        text = S["journal.pin_badge"],
+                        style = MaterialTheme.typography.labelSmall,
+                        color = Coral
                     )
                 }
-            }
-            Spacer(Modifier.height(4.dp))
-            Text(
-                text = entry.displayTitle.ifBlank { entry.appLabel },
-                style = MaterialTheme.typography.titleSmall,
-                fontWeight = FontWeight.Bold,
-                color = MaterialTheme.colorScheme.onPrimaryContainer,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis
-            )
-            Spacer(Modifier.height(3.dp))
-            Text(
-                text = TextTools.compactPreview(entry.displayBody, 100),
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.78f),
-                maxLines = 2,
-                overflow = TextOverflow.Ellipsis
-            )
-            Spacer(Modifier.height(8.dp))
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Box(
-                    Modifier
-                        .size(6.dp)
-                        .clip(CircleShape)
-                        .background(Lime)
-                )
-                Spacer(Modifier.width(5.dp))
-                Text(
-                    text = TimeTools.time(entry.postedAt),
-                    style = MaterialTheme.typography.labelSmall,
-                    color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.7f)
-                )
-                Spacer(Modifier.weight(1f))
-                Text(
-                    text = S["journal.pin_badge"],
-                    style = MaterialTheme.typography.labelSmall,
-                    color = Coral
-                )
             }
         }
     }

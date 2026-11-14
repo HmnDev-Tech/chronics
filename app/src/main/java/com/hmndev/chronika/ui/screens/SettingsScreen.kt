@@ -3,19 +3,26 @@ package com.hmndev.chronika.ui.screens
 import android.app.Activity
 import android.content.Context
 import android.content.ContextWrapper
+import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.background
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
@@ -39,19 +46,20 @@ import androidx.compose.material.icons.rounded.Security
 import androidx.compose.material.icons.rounded.Storage
 import androidx.compose.material.icons.rounded.Terminal
 import androidx.compose.material.icons.rounded.Tune
-import androidx.compose.foundation.lazy.rememberLazyListState
-import androidx.compose.ui.text.font.FontWeight
-import com.hmndev.chronika.ui.components.scrollMotionBlur
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.FilledTonalButton
-import androidx.compose.material3.FilterChip
 import androidx.compose.material3.Icon
+import androidx.compose.material3.MaterialShapes
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Slider
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
+import androidx.compose.material3.ToggleButton
+import androidx.compose.material3.ToggleButtonDefaults
+import androidx.compose.material3.toShape
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -60,9 +68,13 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.focus.onFocusChanged
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalFocusManager
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -74,12 +86,16 @@ import com.hmndev.chronika.service.CaptureEngine
 import com.hmndev.chronika.shizuku.ShizukuManager
 import com.hmndev.chronika.ui.LocalDeviceProfile
 import com.hmndev.chronika.ui.ScreenClass
+import com.hmndev.chronika.ui.components.ContinuousMorphBlob
+import com.hmndev.chronika.ui.components.ExpressivePolygonBadge
+import com.hmndev.chronika.ui.components.SectionHeading
 import com.hmndev.chronika.ui.components.SettingAction
 import com.hmndev.chronika.ui.components.SettingIcon
 import com.hmndev.chronika.ui.components.SettingSwitch
 import com.hmndev.chronika.ui.components.SettingValueRow
 import com.hmndev.chronika.ui.components.SettingsGroupDivider
 import com.hmndev.chronika.ui.components.SettingsSection
+import com.hmndev.chronika.ui.components.scrollMotionBlur
 import com.hmndev.chronika.ui.theme.Coral
 import com.hmndev.chronika.ui.theme.Lime
 import com.hmndev.chronika.util.AccessState
@@ -145,18 +161,85 @@ fun SettingsScreen(
         verticalArrangement = Arrangement.spacedBy(0.dp)
     ) {
         item(key = "heading") {
-            Text(
-                text = S["settings.title"],
-                style = MaterialTheme.typography.headlineMedium,
-                fontWeight = FontWeight.Bold,
-                color = scheme.onSurface,
-                modifier = Modifier.padding(start = 4.dp, top = 8.dp, bottom = 16.dp)
-            )
+            Column(Modifier.padding(bottom = 16.dp)) {
+                SectionHeading(
+                    eyebrow = S["settings.eyebrow"],
+                    title = S["settings.title"]
+                )
+                Spacer(Modifier.height(12.dp))
+                val ready = access.listener && settings.captureEnabled
+                Surface(
+                    shape = RoundedCornerShape(
+                        topStart = 32.dp,
+                        topEnd = 16.dp,
+                        bottomEnd = 32.dp,
+                        bottomStart = 22.dp
+                    ),
+                    color = if (ready) scheme.primaryContainer else scheme.tertiaryContainer,
+                    border = BorderStroke(
+                        1.dp,
+                        if (ready) scheme.primary.copy(alpha = 0.35f) else Coral.copy(alpha = 0.35f)
+                    ),
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Box {
+                        ContinuousMorphBlob(
+                            polygons = listOf(
+                                MaterialShapes.Cookie9Sided,
+                                MaterialShapes.Sunny,
+                                MaterialShapes.Clover4Leaf
+                            ),
+                            brush = Brush.radialGradient(
+                                colors = listOf(
+                                    (if (ready) Lime else Coral).copy(alpha = 0.45f),
+                                    Color.Transparent
+                                )
+                            ),
+                            modifier = Modifier
+                                .size(130.dp)
+                                .align(Alignment.CenterEnd)
+                                .offset(x = 34.dp)
+                        )
+                        Row(
+                            modifier = Modifier.padding(16.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(12.dp)
+                        ) {
+                            ExpressivePolygonBadge(
+                                icon = if (ready) Icons.Rounded.NotificationsActive else Icons.Rounded.Security,
+                                active = ready,
+                                restPolygon = MaterialShapes.Cookie6Sided,
+                                activePolygon = MaterialShapes.Sunny,
+                                containerColor = Coral.copy(alpha = 0.20f),
+                                activeContainerColor = scheme.primary,
+                                contentColor = scheme.onTertiaryContainer,
+                                activeContentColor = scheme.onPrimary,
+                                size = 46.dp,
+                                iconSize = 21.dp
+                            )
+                            Column(Modifier.weight(1f)) {
+                                Text(
+                                    text = S["settings.subtitle"],
+                                    style = MaterialTheme.typography.titleSmall,
+                                    fontWeight = FontWeight.Bold,
+                                    color = if (ready) scheme.onPrimaryContainer else scheme.onTertiaryContainer
+                                )
+                                Text(
+                                    text = "${device.summary} · ${BuildConfig.VERSION_NAME}",
+                                    style = MaterialTheme.typography.labelSmall,
+                                    color = (if (ready) scheme.onPrimaryContainer else scheme.onTertiaryContainer).copy(alpha = 0.78f)
+                                )
+                            }
+                        }
+                    }
+                }
+            }
         }
 
         item(key = "access") {
             SettingsSection(
-                title = S["settings.access"]
+                title = S["settings.access"],
+                subtitle = S["settings.access_sub"]
             ) {
                 AccessRow(
                     title = S["settings.listener"],
@@ -180,7 +263,13 @@ fun SettingsScreen(
             ) {
                 Column(Modifier.padding(horizontal = 16.dp, vertical = 12.dp)) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
-                        SettingIcon(Icons.Rounded.Security, enabled = true, tint = scheme.primary)
+                        SettingIcon(
+                            icon = Icons.Rounded.Security,
+                            enabled = true,
+                            tint = scheme.primary,
+                            active = shizuku.sheveryAvailable && shizuku.sheveryPermissionGranted,
+                            polygon = MaterialShapes.Cookie7Sided
+                        )
                         Spacer(Modifier.width(12.dp))
                         Column(Modifier.weight(1f)) {
                             Text(
@@ -567,7 +656,7 @@ fun SettingsScreen(
                 subtitle = S["settings.appearance_sub"],
                 accent = scheme.primary
             ) {
-                Column(Modifier.padding(horizontal = 16.dp, vertical = 8.dp)) {
+                Column(Modifier.padding(horizontal = 16.dp, vertical = 10.dp)) {
                     Text(
                         text = S["settings.theme"],
                         style = MaterialTheme.typography.titleSmall
@@ -575,20 +664,42 @@ fun SettingsScreen(
                     Spacer(Modifier.height(8.dp))
                     Row(
                         modifier = Modifier.horizontalScroll(rememberScrollState()),
-                        horizontalArrangement = Arrangement.spacedBy(7.dp)
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
                         listOf(
                             "system" to S["settings.theme_system"],
                             "light" to S["settings.theme_light"],
                             "dark" to S["settings.theme_dark"]
-                        )
-                            .forEach { (value, label) ->
-                                FilterChip(
-                                    selected = settings.themeMode == value,
-                                    onClick = { onUpdate { it.copy(themeMode = value) } },
-                                    label = { Text(label) }
-                                )
+                        ).forEach { (value, label) ->
+                            val selected = settings.themeMode == value
+                            ToggleButton(
+                                checked = selected,
+                                onCheckedChange = { onUpdate { it.copy(themeMode = value) } },
+                                shapes = ToggleButtonDefaults.shapes(
+                                    shape = RoundedCornerShape(16.dp),
+                                    pressedShape = RoundedCornerShape(9.dp),
+                                    checkedShape = CircleShape
+                                ),
+                                colors = ToggleButtonDefaults.filledTonalToggleButtonColors(
+                                    containerColor = scheme.surfaceContainerLow,
+                                    contentColor = scheme.onSurfaceVariant,
+                                    checkedContainerColor = scheme.primary,
+                                    checkedContentColor = scheme.onPrimary
+                                ),
+                                contentPadding = PaddingValues(horizontal = 14.dp, vertical = 8.dp)
+                            ) {
+                                if (selected) {
+                                    Box(
+                                        Modifier
+                                            .size(8.dp)
+                                            .clip(MaterialShapes.Sunny.toShape())
+                                            .background(Lime)
+                                    )
+                                    Spacer(Modifier.width(6.dp))
+                                }
+                                Text(label, style = MaterialTheme.typography.labelLarge)
                             }
+                        }
                     }
                 }
                 SettingsGroupDivider()
@@ -639,23 +750,46 @@ fun SettingsScreen(
                 subtitle = S["settings.language_sub"],
                 accent = scheme.primary
             ) {
-                Column(Modifier.padding(horizontal = 16.dp, vertical = 8.dp)) {
+                Column(Modifier.padding(horizontal = 16.dp, vertical = 10.dp)) {
                     Row(
                         modifier = Modifier.horizontalScroll(rememberScrollState()),
-                        horizontalArrangement = Arrangement.spacedBy(7.dp)
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
                         AppLanguage.entries.forEach { language ->
-                            FilterChip(
-                                selected = currentLanguage == language,
-                                onClick = {
+                            val selected = currentLanguage == language
+                            ToggleButton(
+                                checked = selected,
+                                onCheckedChange = {
                                     onUpdate { it.copy(language = language.code) }
                                     S.setLanguage(language)
                                     CaptureEngine.clearLabelCache()
                                     ShizukuManager.refresh()
                                     context.findActivity()?.recreate()
                                 },
-                                label = { Text(S[language.labelKey]) }
-                            )
+                                shapes = ToggleButtonDefaults.shapes(
+                                    shape = RoundedCornerShape(16.dp),
+                                    pressedShape = RoundedCornerShape(9.dp),
+                                    checkedShape = CircleShape
+                                ),
+                                colors = ToggleButtonDefaults.filledTonalToggleButtonColors(
+                                    containerColor = scheme.surfaceContainerLow,
+                                    contentColor = scheme.onSurfaceVariant,
+                                    checkedContainerColor = scheme.primaryContainer,
+                                    checkedContentColor = scheme.onPrimaryContainer
+                                ),
+                                contentPadding = PaddingValues(horizontal = 13.dp, vertical = 8.dp)
+                            ) {
+                                if (selected) {
+                                    Box(
+                                        Modifier
+                                            .size(8.dp)
+                                            .clip(MaterialShapes.Sunny.toShape())
+                                            .background(scheme.primary)
+                                    )
+                                    Spacer(Modifier.width(6.dp))
+                                }
+                                Text(S[language.labelKey], style = MaterialTheme.typography.labelLarge)
+                            }
                         }
                     }
                     Spacer(Modifier.height(8.dp))
@@ -805,9 +939,17 @@ private fun AccessRow(
             .padding(horizontal = 16.dp, vertical = 12.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        SettingIcon(
+        ExpressivePolygonBadge(
             icon = if (granted) Icons.Rounded.Security else Icons.Rounded.Key,
-            tint = if (granted) Lime else Coral
+            active = granted,
+            restPolygon = MaterialShapes.Cookie6Sided,
+            activePolygon = MaterialShapes.Sunny,
+            containerColor = Coral.copy(alpha = 0.16f),
+            activeContainerColor = MaterialTheme.colorScheme.primaryContainer,
+            contentColor = Coral,
+            activeContentColor = MaterialTheme.colorScheme.onPrimaryContainer,
+            size = 40.dp,
+            iconSize = 19.dp
         )
         Spacer(Modifier.width(12.dp))
         Column(Modifier.weight(1f)) {
