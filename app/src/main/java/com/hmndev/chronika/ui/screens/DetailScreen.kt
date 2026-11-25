@@ -6,7 +6,13 @@ import android.content.Context
 import android.content.Intent
 import android.graphics.BitmapFactory
 import android.net.Uri
+import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.expandVertically
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.shrinkVertically
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -48,11 +54,13 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.MaterialShapes
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
+import androidx.compose.material3.toShape
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -77,6 +85,8 @@ import com.hmndev.chronika.i18n.S
 import com.hmndev.chronika.ui.LocalDeviceProfile
 import com.hmndev.chronika.ui.components.AppIcon
 import com.hmndev.chronika.ui.components.MetaPill
+import com.hmndev.chronika.ui.components.MorphingActionIconButton
+import com.hmndev.chronika.ui.theme.Coral
 import com.hmndev.chronika.ui.theme.Lime
 import com.hmndev.chronika.util.EntryFormat
 import com.hmndev.chronika.util.TextTools
@@ -115,6 +125,7 @@ fun DetailScreen(
     }
     val chevronRotation by animateFloatAsState(
         targetValue = if (showRaw) 180f else 0f,
+        animationSpec = MaterialTheme.motionScheme.fastSpatialSpec(),
         label = "rawExpand"
     )
 
@@ -127,56 +138,77 @@ fun DetailScreen(
                 modifier = Modifier
                     .fillMaxWidth()
                     .statusBarsPadding()
-                    .padding(horizontal = device.dp(10.dp), vertical = device.dp(8.dp)),
-                verticalAlignment = Alignment.CenterVertically
+                    .padding(horizontal = device.dp(12.dp), vertical = device.dp(10.dp)),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(6.dp)
             ) {
-                IconButton(onClick = onBack) {
-                    Icon(Icons.Rounded.ArrowBack, contentDescription = S["common.back"])
-                }
+                MorphingActionIconButton(
+                    icon = Icons.Rounded.ArrowBack,
+                    contentDescription = S["common.back"],
+                    active = false,
+                    onClick = onBack,
+                    restPolygon = MaterialShapes.Cookie4Sided,
+                    activePolygon = MaterialShapes.Cookie4Sided,
+                    containerColor = scheme.surfaceContainerHigh,
+                    contentColor = scheme.onSurface
+                )
                 Spacer(Modifier.weight(1f))
-                IconButton(onClick = onToggleRead) {
-                    Icon(
-                        imageVector = if (entry.isRead) {
-                            Icons.Rounded.MarkEmailUnread
-                        } else {
-                            Icons.Rounded.MarkEmailRead
-                        },
-                        contentDescription = if (entry.isRead) {
-                            S["detail.mark_unread"]
-                        } else {
-                            S["detail.mark_read"]
-                        },
-                        tint = if (!entry.isRead) scheme.primary else scheme.onSurfaceVariant
-                    )
-                }
-                IconButton(onClick = onPin) {
-                    Icon(
-                        Icons.Rounded.PushPin,
-                        contentDescription = if (entry.isPinned) S["common.unpin"] else S["common.pin"],
-                        tint = if (entry.isPinned) scheme.primary else scheme.onSurfaceVariant
-                    )
-                }
-                IconButton(onClick = onArchive) {
-                    Icon(
-                        imageVector = if (entry.isArchived) Icons.Rounded.Unarchive else Icons.Rounded.Archive,
-                        contentDescription = if (entry.isArchived) S["detail.unarchive"] else S["detail.archive"],
-                        tint = if (entry.isArchived) scheme.tertiary else scheme.onSurfaceVariant
-                    )
-                }
-                IconButton(onClick = { shareEntry(context, entry) }) {
-                    Icon(
-                        Icons.Rounded.Share,
-                        contentDescription = S["detail.share"],
-                        tint = scheme.onSurfaceVariant
-                    )
-                }
-                IconButton(onClick = { showDelete = true }) {
-                    Icon(
-                        Icons.Rounded.Delete,
-                        contentDescription = S["common.delete"],
-                        tint = scheme.error
-                    )
-                }
+                MorphingActionIconButton(
+                    icon = if (entry.isRead) {
+                        Icons.Rounded.MarkEmailUnread
+                    } else {
+                        Icons.Rounded.MarkEmailRead
+                    },
+                    contentDescription = if (entry.isRead) {
+                        S["detail.mark_unread"]
+                    } else {
+                        S["detail.mark_read"]
+                    },
+                    active = !entry.isRead,
+                    onClick = onToggleRead,
+                    restPolygon = MaterialShapes.Circle,
+                    activePolygon = MaterialShapes.Sunny,
+                    activeContainerColor = scheme.primaryContainer,
+                    activeContentColor = scheme.onPrimaryContainer
+                )
+                MorphingActionIconButton(
+                    icon = Icons.Rounded.PushPin,
+                    contentDescription = if (entry.isPinned) S["common.unpin"] else S["common.pin"],
+                    active = entry.isPinned,
+                    onClick = onPin,
+                    restPolygon = MaterialShapes.Circle,
+                    activePolygon = MaterialShapes.Sunny,
+                    activeContainerColor = scheme.primary,
+                    activeContentColor = scheme.onPrimary
+                )
+                MorphingActionIconButton(
+                    icon = if (entry.isArchived) Icons.Rounded.Unarchive else Icons.Rounded.Archive,
+                    contentDescription = if (entry.isArchived) S["detail.unarchive"] else S["detail.archive"],
+                    active = entry.isArchived,
+                    onClick = onArchive,
+                    restPolygon = MaterialShapes.Circle,
+                    activePolygon = MaterialShapes.Cookie6Sided,
+                    activeContainerColor = scheme.secondaryContainer,
+                    activeContentColor = scheme.onSecondaryContainer
+                )
+                MorphingActionIconButton(
+                    icon = Icons.Rounded.Share,
+                    contentDescription = S["detail.share"],
+                    active = false,
+                    onClick = { shareEntry(context, entry) },
+                    restPolygon = MaterialShapes.Circle,
+                    activePolygon = MaterialShapes.Circle
+                )
+                MorphingActionIconButton(
+                    icon = Icons.Rounded.Delete,
+                    contentDescription = S["common.delete"],
+                    active = true,
+                    onClick = { showDelete = true },
+                    restPolygon = MaterialShapes.Cookie6Sided,
+                    activePolygon = MaterialShapes.Cookie6Sided,
+                    activeContainerColor = scheme.errorContainer,
+                    activeContentColor = scheme.onErrorContainer
+                )
             }
 
             LazyColumn(
@@ -189,46 +221,63 @@ fun DetailScreen(
                 verticalArrangement = Arrangement.spacedBy(12.dp)
             ) {
                 item(key = "header") {
-                    Row(verticalAlignment = Alignment.Top) {
-                        AppIcon(
-                            packageName = entry.packageName,
-                            label = entry.appLabel,
-                            size = 54.dp
-                        )
-                        Spacer(Modifier.width(12.dp))
-                        Column(Modifier.weight(1f)) {
-                            Text(
-                                text = entry.appLabel,
-                                style = MaterialTheme.typography.labelSmall,
-                                color = scheme.primary
+                    Surface(
+                        shape = RoundedCornerShape(
+                            topStart = 36.dp,
+                            topEnd = 16.dp,
+                            bottomEnd = 36.dp,
+                            bottomStart = 22.dp
+                        ),
+                        color = scheme.surfaceContainerLow,
+                        border = BorderStroke(0.5.dp, scheme.outlineVariant.copy(alpha = 0.4f)),
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Row(
+                            modifier = Modifier.padding(16.dp),
+                            verticalAlignment = Alignment.Top
+                        ) {
+                            AppIcon(
+                                packageName = entry.packageName,
+                                label = entry.appLabel,
+                                size = 54.dp,
+                                highlighted = entry.isPinned
                             )
-                            Text(
-                                text = entry.displayTitle.ifBlank { S["common.no_title"] },
-                                style = MaterialTheme.typography.headlineMedium,
-                                color = scheme.onSurface
-                            )
-                            Text(
-                                text = TimeTools.full(entry.postedAt),
-                                style = MaterialTheme.typography.bodySmall,
-                                color = scheme.onSurfaceVariant
-                            )
-                        }
-                        if (canOpenApp) {
-                            OutlinedButton(
-                                onClick = { openSourceApp(context, entry.packageName) },
-                                shape = CircleShape,
-                                contentPadding = PaddingValues(horizontal = 12.dp, vertical = 6.dp)
-                            ) {
-                                Icon(
-                                    Icons.Rounded.OpenInNew,
-                                    contentDescription = null,
-                                    modifier = Modifier.size(15.dp)
-                                )
-                                Spacer(Modifier.width(5.dp))
+                            Spacer(Modifier.width(12.dp))
+                            Column(Modifier.weight(1f)) {
                                 Text(
-                                    text = S["detail.open_app"],
-                                    style = MaterialTheme.typography.labelMedium
+                                    text = entry.appLabel,
+                                    style = MaterialTheme.typography.labelSmall,
+                                    color = scheme.primary
                                 )
+                                Text(
+                                    text = entry.displayTitle.ifBlank { S["common.no_title"] },
+                                    style = MaterialTheme.typography.headlineMedium,
+                                    color = scheme.onSurface
+                                )
+                                Spacer(Modifier.height(4.dp))
+                                Text(
+                                    text = TimeTools.full(entry.postedAt),
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = scheme.onSurfaceVariant
+                                )
+                            }
+                            if (canOpenApp) {
+                                OutlinedButton(
+                                    onClick = { openSourceApp(context, entry.packageName) },
+                                    shape = CircleShape,
+                                    contentPadding = PaddingValues(horizontal = 12.dp, vertical = 6.dp)
+                                ) {
+                                    Icon(
+                                        Icons.Rounded.OpenInNew,
+                                        contentDescription = null,
+                                        modifier = Modifier.size(15.dp)
+                                    )
+                                    Spacer(Modifier.width(5.dp))
+                                    Text(
+                                        text = S["detail.open_app"],
+                                        style = MaterialTheme.typography.labelMedium
+                                    )
+                                }
                             }
                         }
                     }
@@ -236,8 +285,8 @@ fun DetailScreen(
 
                 item(key = "chips") {
                     FlowRow(
-                        horizontalArrangement = Arrangement.spacedBy(6.dp),
-                        verticalArrangement = Arrangement.spacedBy(6.dp)
+                        horizontalArrangement = Arrangement.spacedBy(7.dp),
+                        verticalArrangement = Arrangement.spacedBy(7.dp)
                     ) {
                         MetaPill(
                             text = EntryFormat.sourceLabel(entry.source),
@@ -252,8 +301,8 @@ fun DetailScreen(
                         if (entry.isPinned) {
                             MetaPill(
                                 text = S["detail.pinned"],
-                                container = scheme.primaryContainer,
-                                content = scheme.onPrimaryContainer
+                                container = scheme.primary,
+                                content = scheme.onPrimary
                             )
                         }
                         if (entry.isArchived) {
@@ -286,8 +335,14 @@ fun DetailScreen(
                 if (entry.displayBody.isNotBlank()) {
                     item(key = "body") {
                         Surface(
-                            shape = RoundedCornerShape(30.dp),
-                            color = scheme.surfaceContainerLow,
+                            shape = RoundedCornerShape(
+                                topStart = 34.dp,
+                                topEnd = 18.dp,
+                                bottomEnd = 34.dp,
+                                bottomStart = 24.dp
+                            ),
+                            color = scheme.surfaceContainer,
+                            border = BorderStroke(0.5.dp, scheme.outlineVariant.copy(alpha = 0.4f)),
                             modifier = Modifier.fillMaxWidth()
                         ) {
                             SelectionContainer {
@@ -355,11 +410,17 @@ fun DetailScreen(
 
                 item(key = "meta") {
                     Surface(
-                        shape = RoundedCornerShape(26.dp),
+                        shape = RoundedCornerShape(
+                            topStart = 20.dp,
+                            topEnd = 32.dp,
+                            bottomEnd = 20.dp,
+                            bottomStart = 32.dp
+                        ),
                         color = scheme.surfaceContainerLow,
+                        border = BorderStroke(0.5.dp, scheme.outlineVariant.copy(alpha = 0.4f)),
                         modifier = Modifier.fillMaxWidth()
                     ) {
-                        Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                        Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(7.dp)) {
                             MetaRow(S["detail.package"], entry.packageName)
                             MetaRow(S["detail.channel"], entry.channelName.ifBlank { entry.channelId })
                             MetaRow(S["detail.category"], entry.category.ifBlank { "—" })
@@ -374,8 +435,14 @@ fun DetailScreen(
 
                 item(key = "raw") {
                     Surface(
-                        shape = RoundedCornerShape(26.dp),
+                        shape = RoundedCornerShape(
+                            topStart = 30.dp,
+                            topEnd = 18.dp,
+                            bottomEnd = 30.dp,
+                            bottomStart = 22.dp
+                        ),
                         color = scheme.surfaceContainerLow,
+                        border = BorderStroke(0.5.dp, scheme.outlineVariant.copy(alpha = 0.4f)),
                         modifier = Modifier.fillMaxWidth()
                     ) {
                         Column(Modifier.padding(16.dp)) {
@@ -385,6 +452,13 @@ fun DetailScreen(
                                     .clickable { showRaw = !showRaw },
                                 verticalAlignment = Alignment.CenterVertically
                             ) {
+                                Box(
+                                    Modifier
+                                        .size(10.dp)
+                                        .clip(MaterialShapes.Cookie4Sided.toShape())
+                                        .background(scheme.primary)
+                                )
+                                Spacer(Modifier.width(8.dp))
                                 Text(
                                     text = S["detail.raw"],
                                     style = MaterialTheme.typography.labelSmall,
@@ -400,7 +474,11 @@ fun DetailScreen(
                                     )
                                 }
                             }
-                            if (showRaw) {
+                            AnimatedVisibility(
+                                visible = showRaw,
+                                enter = expandVertically(MaterialTheme.motionScheme.defaultSpatialSpec()) + fadeIn(),
+                                exit = shrinkVertically(MaterialTheme.motionScheme.defaultSpatialSpec()) + fadeOut()
+                            ) {
                                 SelectionContainer {
                                     Text(
                                         text = rawFormatted,
@@ -408,7 +486,8 @@ fun DetailScreen(
                                             fontFamily = FontFamily.Monospace,
                                             fontSize = 11.sp
                                         ),
-                                        color = scheme.onSurfaceVariant
+                                        color = scheme.onSurfaceVariant,
+                                        modifier = Modifier.padding(top = 6.dp)
                                     )
                                 }
                             }
@@ -474,18 +553,20 @@ fun DetailScreen(
 private fun MessageTape(message: com.hmndev.chronika.util.MessageView) {
     val scheme = MaterialTheme.colorScheme
     Surface(
-        shape = RoundedCornerShape(22.dp),
+        shape = RoundedCornerShape(topStart = 24.dp, topEnd = 12.dp, bottomEnd = 24.dp, bottomStart = 18.dp),
         color = scheme.surfaceContainerLow,
+        border = BorderStroke(0.5.dp, scheme.outlineVariant.copy(alpha = 0.35f)),
         modifier = Modifier.fillMaxWidth()
     ) {
-        Row(Modifier.padding(13.dp), verticalAlignment = Alignment.Top) {
+        Row(Modifier.padding(14.dp), verticalAlignment = Alignment.Top) {
             Box(
                 Modifier
-                    .size(8.dp)
-                    .clip(CircleShape)
+                    .padding(top = 4.dp)
+                    .size(9.dp)
+                    .clip(MaterialShapes.Sunny.toShape())
                     .background(Lime)
             )
-            Spacer(Modifier.width(9.dp))
+            Spacer(Modifier.width(10.dp))
             Column(Modifier.weight(1f)) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Text(
@@ -503,7 +584,7 @@ private fun MessageTape(message: com.hmndev.chronika.util.MessageView) {
                         )
                     }
                 }
-                Spacer(Modifier.height(3.dp))
+                Spacer(Modifier.height(4.dp))
                 SelectionContainer {
                     Text(
                         text = message.text,
@@ -519,11 +600,19 @@ private fun MessageTape(message: com.hmndev.chronika.util.MessageView) {
 @Composable
 private fun MetaRow(label: String, value: String) {
     Row(verticalAlignment = Alignment.Top) {
+        Box(
+            Modifier
+                .padding(top = 5.dp)
+                .size(6.dp)
+                .clip(MaterialShapes.Cookie4Sided.toShape())
+                .background(Coral.copy(alpha = 0.7f))
+        )
+        Spacer(Modifier.width(7.dp))
         Text(
             text = label,
             style = MaterialTheme.typography.labelSmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
-            modifier = Modifier.width(86.dp)
+            modifier = Modifier.width(84.dp)
         )
         Text(
             text = value,
@@ -564,7 +653,7 @@ private fun LocalImage(path: String) {
             contentScale = ContentScale.FillWidth,
             modifier = Modifier
                 .fillMaxWidth()
-                .clip(RoundedCornerShape(24.dp))
+                .clip(RoundedCornerShape(28.dp))
         )
     } else {
         Text(

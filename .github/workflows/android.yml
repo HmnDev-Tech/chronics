@@ -38,6 +38,8 @@ jobs:
 
       - name: Set up Gradle
         uses: gradle/actions/setup-gradle@v6
+        with:
+          cache-provider: basic
 
       # The same key must sign every APK, otherwise Android refuses to install
       # an update over the previous build and the app has to be uninstalled.
